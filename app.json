@@ -3,11 +3,12 @@
     "name": "test",
     "slug": "test",
     "version": "1.0.0",
+    "scheme": "com.jiovani.test",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/Dyipspotlogo.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/Dyipspotlogo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -15,13 +16,79 @@
       "supportsTablet": true
     },
     "android": {
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ],
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/Dyipspotlogo.png",
         "backgroundColor": "#ffffff"
+      },
+      "package": "com.jiovani.test",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AlzaSys7yMF2FmoNa9joXNoPdTlf1MWT8O3l0Xv"
+        }
       }
     },
     "web": {
+      "bundler": "metro",
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsDownloadToken": "sk.eyJ1IjoiamlvdmFuaTEyMyIsImEiOiJjbHl6bWF1cmsxejBlMmpzZ2ZseXRobjNqIn0.x7v7P32RDVcf7wKm2ScYOA"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Show current location on map.",
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      "expo-router",
+
+    [  "expo-font",
+      {
+        "fonts": [
+          "./assets/fonts/Barlow-ExtraBoldItalic.ttf",
+          "./assets/fonts/Barlow-ExtraBold.ttf",
+          "./assets/fonts/PlusJakartaSans-ExtraBold.ttf",
+          "./assets/fonts/PlusJakartaSans-BoldItalic.ttf",
+          "./assets/fonts/PlusJakartaSans-Medium.ttf",
+          "./assets/fonts/PlusJakartaSans-SemiBold.ttf",
+          "./assets/fonts/PlusJakartaSans-Light.ttf",
+          "./assets/fonts/PlusJakartaSans-Regular.ttf"
+        ]
+      }
+
+    ]
+
+    ],
+
+
+
+
+
+
+
+    "extra": {
+      "eas": {
+        "projectId": "6c8085e9-6829-4710-9f1c-aa1ebe414ff3"
+      }
+    },
+
+    "androidNavigationBar": {
+      "barStyle": "dark-content",
+      "backgroundColor": "#FFFFFF"
     }
   }
 }
