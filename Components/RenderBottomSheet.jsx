@@ -10,7 +10,15 @@ const RenderBottomSheet = () => {
     const {role}=CurrentUser
     return (
             <>
-            {role === "passenger"?<><JeepsBottomSheet/><UserBottomSheet/></>:<DriverBottomSheet/>}
+            {role === "passenger"?
+                <>
+                    <JeepsBottomSheet/>
+                    <UserBottomSheet/>
+                </>
+                :
+                <DriverBottomSheet/>
+
+            }
             </>
 
     );

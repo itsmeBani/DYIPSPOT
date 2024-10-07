@@ -1,49 +1,156 @@
-import React from 'react';
-import {Button, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View} from "react-native";
+import React, {useContext, useEffect, useState} from 'react';
+import {
+    ActivityIndicator,
+    AppState,
+    Button,
+    Image, Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Passengers from "../assets/user-alt2.png"
 import * as Location from "expo-location";
+import useFetchLocation from "../CustomHooks/useFetchLocation";
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import {promptForEnableLocationIfNeeded} from "react-native-android-location-enabler";
 
-function CategoryButton(props) {
+import {isLocationEnabled} from 'react-native-android-location-enabler';
+import {JeepStatusContext} from "../Context/JeepStatus";
 
 
-    const CategoryButtonTemplate = ({label, children}) => {
+function CategoryButton() {
+
+    const {setIsPassenger, setIsJeeps,isPassenger, isJeeps,hideRouteline, sethideRouteline} = useContext(JeepStatusContext)
+    function showPassenger() {
+
+        sethideRouteline(false)
+        setIsPassenger(true)
+        setIsJeeps(false)
+    }
+
+    function showJeeps() {
+
+        if (!isPassenger) {
+            return
+        }
+        setIsJeeps(!isJeeps)
+        setIsPassenger(false)
+    }
+
+
+    const [userLocationData] = useFetchLocation("users");
+
+
+    const [driverLocationData] = useFetchLocation("drivers");
+    const [islocationEnabled, setisLocationEnabled] = useState(false)
+    const CategoryButtonTemplate = ({label, children, functionName}) => {
         return (
 
-            <TouchableOpacity activeOpacity={0.8} style={CategoryButtonStyle.buttonStyle} onPress={async () => {
-                const {status: newBackgroundStatus} = await Location.requestBackgroundPermissionsAsync();
-            }}>
+            <TouchableOpacity activeOpacity={1} onPress={functionName}
+                              style={[CategoryButtonStyle.buttonStyle, {backgroundColor: isPassenger && label === "Passengers" ? "#3083FF" : isJeeps && label === "Jeeps" ? "#3083FF" : "white"}]}
+            >
 
 
                 {children}
-                <Text style={CategoryButtonStyle.buttonlabel}>{label}</Text>
+
+                <Text
+                    style={[CategoryButtonStyle.buttonlabel, {color: isPassenger && label === "Passengers" ? "white" : isJeeps && label === "Jeeps" ? "white" : "rgba(0,0,0,0.74)"}]}>{label}</Text>
             </TouchableOpacity>
         )
 
     }
 
+    async function handleEnabledPressed() {
+        if (Platform.OS === 'android') {
+            try {
+                const enableResult = await promptForEnableLocationIfNeeded();
+                if (enableResult === "enabled") {
+                    setisLocationEnabled(true)
+                }
+            } catch (error) {
+                if (error) {
+                    console.log("denied")
+                }
+            }
+        }
+    }
+
+
+    async function handleCheckPressed() {
+        if (Platform.OS === 'android') {
+            const checkEnabled = await isLocationEnabled();
+            setisLocationEnabled(checkEnabled)
+        }
+    }
+
+    useEffect(() => {
+        handleCheckPressed().then()
+    }, [])
+
+
     return (
         <View style={CategoryButtonStyle.buttonContainer}>
             <ScrollView horizontal={true} showsHorizontalScrollIndicator={false}
                         contentContainerStyle={CategoryButtonStyle.ScrollBtnContainer}>
-                <CategoryButtonTemplate label={"Passengers"}>
+                <CategoryButtonTemplate label={"Passengers"} functionName={showPassenger}>
 
-                    {/*<MaterialCommunityIcons name="jeepney" size={20} color="#3083FF"/>*/}
-                    <Image source={Passengers} style={CategoryButtonStyle.buttonicon}/>
+
+                    <FontAwesome6 name="user-group" size={14} color={isPassenger ? "white" : "#3083FF"}/>
+                    <View style={[CategoryButtonStyle.countBox, {backgroundColor: isPassenger ? "white" : "#3083FF"}]}>
+
+                        <Text
+                            style={[CategoryButtonStyle.count, {color: isPassenger ? "#3083FF" : "white"}]}>{userLocationData?.length ? userLocationData?.length :
+                            <ActivityIndicator size={13} color={isPassenger ? "#3083FF" : "white"}/>}</Text>
+                    </View>
                 </CategoryButtonTemplate>
-                <CategoryButtonTemplate label={"Jeeps"}>
 
-                    <MaterialCommunityIcons name="jeepney"   size={20} color="#3083FF"/>
+
+                <CategoryButtonTemplate label={"Jeeps"} functionName={showJeeps}>
+
+                    <MaterialCommunityIcons name="jeepney" size={20} color={isJeeps ? "white" : "#3083FF"}/>
+                    <View style={[CategoryButtonStyle.countBox, {backgroundColor: isJeeps ? "white" : "#3083FF"}]}>
+
+                        <Text
+                            style={[CategoryButtonStyle.count, {color: isJeeps ? "#3083FF" : "white"}]}>{driverLocationData?.length ? driverLocationData?.length :
+                            <ActivityIndicator size={13} color={isJeeps ? "#3083FF" : "white"}/>}</Text>
+                    </View>
 
                 </CategoryButtonTemplate>
 
             </ScrollView>
+
+            <View style={CategoryButtonStyle.statusLocation}>
+
+                <TouchableOpacity activeOpacity={1} onPress={handleEnabledPressed}
+                                  style={[CategoryButtonStyle.islocation, {backgroundColor: islocationEnabled ? "#3083FF" : "white"}]}>
+
+                    {/*<MaterialIcons name="location-disabled" size={20} color="#605f5f" />*/}
+
+
+                    {islocationEnabled ?
+                        <MaterialIcons name="my-location" size={20} color={islocationEnabled ? "white" : "#605f5f"}/> :
+                        <MaterialIcons name="location-disabled" size={20}
+                                       color={islocationEnabled ? "white" : "#605f5f"}/>}
+
+                </TouchableOpacity>
+
+
+                <TouchableOpacity activeOpacity={1} style={CategoryButtonStyle.weather}>
+                    <MaterialCommunityIcons name="weather-cloudy" size={20} color="#605f5f"/>
+                    <Text style={CategoryButtonStyle.weathertxt}> 27°</Text>
+                </TouchableOpacity>
+            </View>
 
         </View>
     );
 }
 
 export default CategoryButton;
+
 
 const CategoryButtonStyle = StyleSheet.create({
     buttonContainer: {
@@ -52,10 +159,11 @@ const CategoryButtonStyle = StyleSheet.create({
         display: 'flex',
         gap: 5,
 
-        flexDirection: 'row',
+        flexDirection: 'column',
     },
     buttonStyle: {
         display: 'flex',
+        position: "relative",
         flexDirection: "row",
         backgroundColor: "white",
         paddingHorizontal: 14,
@@ -70,7 +178,7 @@ const CategoryButtonStyle = StyleSheet.create({
         fontFamily: "PlusJakartaSans-Medium",
         justifyContent: "center",
         paddingBottom: 1,
-        color:"rgba(0,0,0,0.74)"
+        color: "rgba(0,0,0,0.74)"
     },
 
     ScrollBtnContainer: {
@@ -82,7 +190,52 @@ const CategoryButtonStyle = StyleSheet.create({
     buttonicon: {
 
         width: 15,
-        height: 15 ,
-    }
+        height: 15,
+    }, count: {
+        fontSize: 10,
+        color: "#fff",
+        borderStyle: "solid",
+        borderColor: "rgba(252,217,54,0.42)",
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        fontFamily: "PlusJakartaSans-Bold",
 
+    }, countBox: {
+        position: "absolute",
+        top: -9,
+        borderRadius: 100,
+
+        right: -5,
+        backgroundColor: "#3083FF",
+
+
+    }, statusLocation: {
+        paddingHorizontal: 12,
+        display: "flex",
+        flexDirection: "row",
+        gap: 7
+    }, islocation: {
+
+        backgroundColor: "#fff",
+        paddingVertical: 7,
+        elevation: 3,
+        borderRadius: 10,
+        paddingHorizontal: 9,
+    }
+    , weather: {
+
+        backgroundColor: "#fff",
+        paddingVertical: 7,
+        display: "flex",
+        flexDirection: "row",
+        elevation: 3,
+        borderRadius: 10,
+        gap: 2,
+        paddingHorizontal: 9,
+        alignItems: "center",
+    }, weathertxt: {
+        fontFamily: "PlusJakartaSans-Medium",
+        fontSize: 10,
+        color: "#605f5f"
+    }
 })

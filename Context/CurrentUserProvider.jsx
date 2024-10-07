@@ -11,6 +11,12 @@ function CurrentUserProvider({children}) {
     const BottomSheetRef = useRef()
     const camera = useRef(null)
 
+
+    //States for the StatusModal
+
+
+
+
     async function getLocalUserCredentials() {
         AsyncStorage.getItem("UserCredentials").then(async userdata => {
             if (userdata) {
@@ -24,18 +30,22 @@ function CurrentUserProvider({children}) {
     }
 
     useEffect(() => {
-        // SetUser().then()
         getLocalUserCredentials().then()
     }, [refresh]);
 
 
-    const OpenBottomSheet = () => {
-        BottomSheetRef.current.expand()
+    const OpenBottomSheet = (lon,lat,heading) => {
+
+
+
+        BottomSheetRef.current.snapToIndex(0)
         camera.current?.setCamera({
-                centerCoordinate: [120.448687, 16.933407],
+                centerCoordinate: [lon, lat],
                 pitch: 60,
+            heading:heading,
                 zoomLevel: 16,
                 animationMode: "flyTo"
+
             }
         )
     }
@@ -48,7 +58,7 @@ function CurrentUserProvider({children}) {
                 OpenBottomSheet,
                 setRefresh,
                 camera,
-                token, settoken, refresh, CurrentUser,setCurrentUser
+                token, settoken, refresh, CurrentUser,setCurrentUser,
             }}>
             {children}
         </CurrentUserContext.Provider>

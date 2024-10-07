@@ -1,7 +1,7 @@
 import React, {useContext} from 'react';
 
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import {Button, Text, View} from 'react-native';
+import {Button, StatusBar, Text, View} from 'react-native';
 import MapTab from "./MapTab"
 import {SafeAreaProvider} from "react-native-safe-area-context";
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -11,48 +11,13 @@ import Foundation from '@expo/vector-icons/Foundation';
 import WelcomePage from "../Components/WelcomePage";
 import  Header from "../Components/Header";
 import {NavigationContainer} from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import {CurrentUserContext} from "../Context/CurrentUserProvider";
+import SettingsTab from "./SettingsTab";
 import PermissionAndTaskManagerProvider, {
     PermissionAndTaskManagerContext
 } from "../Context/PermissionAndTaskManagerProvider";
 import HomeTab from "./HomeTab";
 
-function ProfileScreen() {
-    const {CurrentUser,setCurrentUser} = useContext(CurrentUserContext)
-    const  {stopBackgroundLocationTask} = useContext(PermissionAndTaskManagerContext)
 
-    const removeitem = async (key)=> {
-        await stopBackgroundLocationTask();
-       try {
-
-            await AsyncStorage.removeItem(key);
-            console.log("remove")
-           console.log(CurrentUser)
-           setCurrentUser(null)
-
-            return true;
-        }
-        catch(exception) {
-            return false;
-        }
-    }
-
-
-
-    return (
-        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-            <Text>Profile Screen</Text>
-            <Ionicons name="checkmark-circle" size={32} color="blue"/>
-            <FontAwesome.Button name="home" backgroundColor="#3b5998" onPress={()=>{removeitem("UserCredentials").then(setCurrentUser(null))}}>
-                Login with Facebook
-            </FontAwesome.Button>
-{/*<Text>{token}</Text>*/}
-            <Text>{JSON.stringify(CurrentUser)}</Text>
-
-        </View>
-    );
-}
 function IndexTab(props) {
     const Tab = createBottomTabNavigator();
 
@@ -96,15 +61,14 @@ function IndexTab(props) {
     return (
 
         <PermissionAndTaskManagerProvider>
+            <StatusBar backgroundColor={"white"} barStyle={"dark-content"}/>
             <SafeAreaProvider>
-              <NavigationContainer independent={true}>
-
+                <NavigationContainer independent={true}>
                   <Tab.Navigator screenOptions={({route}) => ({
-
-
                       tabBarIcon: ({focused, color, size}) => {
                               if (route.name === 'Home') {
                               return <Foundation name="home" size={20} color={color}/>
+
                           } else if (route.name === 'Settings') {
                               return <Ionicons name="settings" size={20} color={color} />
                           } else if (route.name === 'Track') {
@@ -120,7 +84,7 @@ function IndexTab(props) {
                                           backgroundColor: '#fff',
                                           shadowColor: 'black',
                                           shadowRadius: 30,
-                                          elevation: 10
+                                          elevation: 5
 
                                       },
                                       tabBarLabelPosition:"below-icon",
@@ -147,7 +111,7 @@ function IndexTab(props) {
                                   }} component={MapTab}/>
 
 
-                      <Tab.Screen name="Settings" component={ProfileScreen}/>
+                      <Tab.Screen name="Settings" component={SettingsTab}/>
                   </Tab.Navigator>
               </NavigationContainer>
             </SafeAreaProvider>

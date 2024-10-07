@@ -1,79 +1,156 @@
-import {Image, ScrollView, StyleSheet, Text, View} from "react-native";
+import {ActivityIndicator, Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View} from "react-native";
 import BottomSheet, {BottomSheetScrollView, BottomSheetView} from "@gorhom/bottom-sheet";
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import {CurrentDriverContext} from "../Context/CurrentDriverProvider";
 import React, {useContext, useEffect, useRef, useState} from "react";
-import Jeeper from "../assets/dyip.png";
 import time from "../assets/time-fast.png"
 import passengers from "../assets/users-alt (1).png"
 import km from "../assets/tachometer-fastest.png"
-import  CurrentlocImage from "../assets/map-marker.png"
-import SimpleLineIcons from '@expo/vector-icons/SimpleLineIcons';
+import CurrentlocImage from "../assets/map-marker.png"
 import Octicons from '@expo/vector-icons/Octicons';
 import {CurrentUserContext} from "../Context/CurrentUserProvider";
+import {JeepStatusContext} from "../Context/JeepStatus";
+import {db} from "../api/firebase-config";
+import {collection, getDocs, onSnapshot, query, where} from "firebase/firestore";
+import CachedImage from "react-native-expo-cached-image";
+import useReverseGeoCoding from "../CustomHooks/useReverseGeoCoding";
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import Timeline from "./Timeline";
+import Ionicons from '@expo/vector-icons/Ionicons';
+import {useSharedValue, withTiming} from "react-native-reanimated";
+
 const UserBottomSheet = () => {
+    const {BottomSheetRef} = useContext(CurrentUserContext)
+    const [isOpen, setIsOpen] = useState(false)
+    const {jeepid, JeepStatusModal, setJeepStatusModal, closeAnimatedModal,} = useContext(JeepStatusContext)
+    const [jeepData, setJeepData] = useState(null);
+    const [longitude, setLongitude] = useState(null);
+    const [latitude, setLatitude] = useState(null);
+    const {Address} = useReverseGeoCoding(longitude, latitude);
 
-    const {test} = useContext(CurrentDriverContext)
-    const  {BottomSheetRef}=useContext(CurrentUserContext)
-    const  [isOpen, setIsOpen] = useState(false)
+    const [loading, setLoading] = useState(true)
+    useEffect(() => {
+
+        const fetchDriverData = () => {
+
+            setLoading(true)
+
+            try {
+                const driverRef = collection(db, "drivers");
+                const driverQuery = query(driverRef, where("id", "==", jeepid));
+                const unsubscribe = onSnapshot(driverQuery, async (snapshot) => {
+                    if (!snapshot.empty) {
+                        const driver = snapshot.docs[0].data();
+                        await setLongitude(driver?.longitude);
+                        await setLatitude(driver?.latitude);
+
+                        await setJeepStatusModal({
+                                speed: driver.speed,
+                                currentLocation: [driver?.longitude, driver?.latitude],
+                                destination: driver?.endpoint,
+                                distance: 0,
+                                EstimavetedArrivalTime: 0,
+                            }
+                        )
+
+                        setJeepData(driver);
+                        setLoading(false)
+                    } else {
+                        setJeepData(null);
+                    }
+                });
+                return () => unsubscribe();
+            } catch (error) {
+                console.error("Error fetching driver data: ", error);
+            } finally {
+            }
+        };
+
+        if (jeepid) {
+            fetchDriverData();
+        }
+    }, [jeepid]);
+
+
     return (
-        <BottomSheet
-            ref={BottomSheetRef}
-            snapPoints={['30%', '50%', '60%']}
-            enableOverDrag={false}
-            index={-1}
-            enablePanDownToClose={true}
-            onClose={()=>isOpen}
-            handleIndicatorStyle={{backgroundColor: "#3083FF"}}
-            backgroundStyle={{borderRadius: 30, elevation: 10}}>
-            <BottomSheetScrollView contentContainerStyle={UserBottomStyle.contentContainer}>
-                <View style={UserBottomStyle.gradientContainer}>
+        <>
+            <BottomSheet
+                ref={BottomSheetRef}
+                snapPoints={['30%', '40%', '50%']}
+                enableOverDrag={false}
 
-                    <View style={UserBottomStyle.parentdrivercon}>
+                index={-1}
+                enablePanDownToClose={true}
+                onClose={() => closeAnimatedModal()}
+                handleIndicatorStyle={{backgroundColor: "#3083FF"}}
+                backgroundStyle={{borderRadius: 30, elevation: 10}}>
+                <BottomSheetScrollView contentContainerStyle={UserBottomStyle.contentContainer}>
+                    {!loading ?
 
-                        <View style={{display: "flex", flexDirection: "row", gap: 10}}>
-                            <View style={UserBottomStyle.driverAvatar}>
-                                <Image
-                                    style={UserBottomStyle.AvatarImage}
-                                    source={Jeeper}
-                                />
+                        <View style={UserBottomStyle.gradientContainer}>
+                            <View style={UserBottomStyle.parentdrivercon}>
 
+                                <View style={{display: "flex", flexDirection: "row", gap: 10}}>
+                                    <View style={UserBottomStyle.driverAvatar}>
+
+                                        {jeepData?.imageUrl && <CachedImage style={UserBottomStyle.AvatarImage}
+                                                                            source={{uri: jeepData?.imageUrl}}/>}
+                                    </View>
+                                    <View style={UserBottomStyle.drivernameLabel}>
+                                        <Text style={UserBottomStyle.drivernameLabeltext}> Driver</Text>
+                                        <Text
+                                            style={UserBottomStyle.drivername}>{jeepData?.name ? jeepData?.name : "..Loading"}</Text>
+
+                                    </View>
+
+                                </View>
+                                <View style={UserBottomStyle.contactbtns}>
+                                    <TouchableOpacity activeOpacity={1} onPress={() => {
+                                        Linking.openURL('sms:09193758933');
+                                    }}>
+                                        <View style={UserBottomStyle.callbox}>
+                                            <Ionicons name="chatbubble-ellipses-sharp" size={18} color="#fff"/>
+                                        </View>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity activeOpacity={1} onPress={() => {
+                                        Linking.openURL('tel:09193758933');
+                                    }}>
+                                        <View style={UserBottomStyle.callbox}>
+                                            <FontAwesome6 name="phone" size={18} color="#fff"/>
+                                        </View>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+
+
+                            {jeepData?.endpoint !==null && jeepData?.startpoint !==null?
+                                <View style={UserBottomStyle.timelinecon}>
+                                    <Timeline Startpoint={jeepData?.startpoint} Destination={jeepData?.endpoint}/>
+                                </View> : null}
+
+                            <View style={UserBottomStyle.StatusContainer}>
+                                <IconStatusBox icon={passengers} label={"No of Passengers"} txthighlight={10}
+                                               txt={"/22"}/>
+                            </View>
+
+                            <View style={UserBottomStyle.WarningContainer}>
+                                <View style={UserBottomStyle.ChildWarningContainer}>
+
+                                    <View style={UserBottomStyle.warningtitle}>
+
+                                        <Octicons name="info" size={15} color="#1E3FAE"/><Text
+                                        style={UserBottomStyle.warningtext}>Seat Capacity Alert</Text></View>
+                                    <View><Text style={UserBottomStyle.warningmessage}>If a larger passenger boards,
+                                        please
+                                        be aware that the seating capacity may be affected.</Text></View>
+                                </View>
 
                             </View>
-                            <View style={UserBottomStyle.drivernameLabel}>
-                                <Text style={UserBottomStyle.drivernameLabeltext}> Driver</Text>
-                                <Text style={UserBottomStyle.drivername}>{test}</Text>
 
-                            </View>
-
-                        </View>
-
-                        <View><Text></Text></View>
-                    </View>
-
-                    <View style={UserBottomStyle.StatusContainer}>
-                        <IconStatusBox icon={CurrentlocImage}  label={"Current Location"}  txt={"Tagudin Ilocos Sur"} />
-                        <IconStatusBox icon={time}  label={"Estimated Arrival Time"} txthighlight={17} txt={"mins"} />
-                        <IconStatusBox icon={km}  label={"Speed"} txthighlight={30} txt={"km/h"} />
-                        <IconStatusBox icon={passengers}  label={"No of Passengers"} txthighlight={10} txt={"/22"} />
-                    </View>
-
-                    <View style={UserBottomStyle.WarningContainer}>
-                        <View style={UserBottomStyle.ChildWarningContainer}>
-
-                            <View style={UserBottomStyle.warningtitle}>
-
-                                <Octicons name="info" size={15} color="#1E3FAE" /><Text style={UserBottomStyle.warningtext}>Seat Capacity Alert</Text></View>
-                            <View><Text style={UserBottomStyle.warningmessage}>If a larger passenger boards, please be aware that the seating capacity may be affected.</Text></View>
-                        </View>
-
-                    </View>
-
-                </View>
-
-
-            </BottomSheetScrollView>
-        </BottomSheet>
+                        </View>: <ActivityIndicator color={"#3083FF"} size={30}/>
+                    }
+                </BottomSheetScrollView>
+            </BottomSheet>
+        </>
     )
 }
 
@@ -81,21 +158,36 @@ const UserBottomSheet = () => {
 export default UserBottomSheet;
 
 
-export  const  IconStatusBox=({icon,label,txthighlight,txt})=>{
+export const IconStatusBox = ({icon, label, txthighlight, txt, customStyle = {}}) => {
     return (
-        <View style={UserBottomStyle.StatusChildContainer}>
-            <Image
-                style={UserBottomStyle.statusIcon}
-                source={icon}
-            />
+        <View style={[UserBottomStyle.StatusChildContainer, customStyle.container]}>
+            {icon && (
+                <Image
+                    style={[UserBottomStyle.statusIcon, customStyle.icon]}
+                    source={icon}
+                />
+            )}
             <View>
-                <Text style={UserBottomStyle.drivernameLabeltext}>{label}</Text>
-                <Text style={UserBottomStyle.drivername}><Text style={UserBottomStyle.txthighlight}>{txthighlight}</Text>{txt}</Text>
-            </View>
+                <Text style={[UserBottomStyle.drivernameLabeltext, customStyle.label]}>{label}</Text>
+                <View style={customStyle.margintxt}>
+                    <Text
+                        style={[
+                            UserBottomStyle.drivername,
+                            {
+                                fontSize: customStyle?.fontSize ?? UserBottomStyle.drivername.fontSize,
+                                fontFamily: customStyle?.fontFamily ?? UserBottomStyle.drivername.fontFamily,
+                                color: customStyle?.color ?? UserBottomStyle.drivername.color,
+                            },
+                            customStyle.text
+                        ]}><Text style={[UserBottomStyle.txthighlight, customStyle.highlight]}>{txthighlight}</Text>
+                     {txt ?? "loading..."}</Text>
 
+                </View>
+            </View>
         </View>
-    )
-}
+    );
+};
+
 const UserBottomStyle = StyleSheet.create({
     contentContainer: {
 
@@ -110,8 +202,8 @@ const UserBottomStyle = StyleSheet.create({
         width: '100%',
         backgroundColor: "#ffffff",
         borderRadius: 10,
-        elevation: 0.5,
 
+        position: "relative",
     },
     driverInfoCard: {
         flex: 0.25,
@@ -152,15 +244,14 @@ const UserBottomStyle = StyleSheet.create({
 
         fontSize: 13,
 
-        fontFamily:"PlusJakartaSans-Bold",
+        fontFamily: "PlusJakartaSans-Medium",
     }, drivername: {
-        color: "#959595",
-        fontSize: 11,
-        fontFamily:"PlusJakartaSans-Medium",
-        lineHeight: 14,
+        color: "rgba(88,87,87,0.88)",
+        fontSize: 13,
+        fontFamily: "PlusJakartaSans-Bold",
     },
-    txthighlight:{
-        fontFamily:"PlusJakartaSans-Bold",
+    txthighlight: {
+        fontFamily: "PlusJakartaSans-Bold",
         color: "#3083FF",
     },
     parentdrivercon: {
@@ -168,11 +259,16 @@ const UserBottomStyle = StyleSheet.create({
         alignItems: "center",
         display: 'flex',
         padding: 10,
-        paddingHorizontal: 15,
+
+        borderStyle: "solid",
+        borderColor: "rgba(0,0,0,0.21)",
+        borderRadius: 15,
+
+        paddingHorizontal: 20,
         width: "100%",
         justifyContent: "space-between",
         flexDirection: "row",
-        gap: 8,
+
     }, drivercontact: {
         fontSize: 11,
         color: "#959595",
@@ -183,8 +279,9 @@ const UserBottomStyle = StyleSheet.create({
         alignItems: "top",
         display: 'flex',
     }, AvatarImage: {
-        width: 50,
-        height: 50,
+        width: 45,
+        borderRadius: 100,
+        height: 45,
     }, ParentstatusLabel: {
         display: 'flex',
         flexDirection: "row",
@@ -227,31 +324,52 @@ const UserBottomStyle = StyleSheet.create({
     }, ChildWarningContainer: {
         borderStyle: "solid",
         borderColor: "#1E3FAE",
-        borderWidth:1,
+        borderWidth: 1,
         flex: 1,
         width: "100%",
-        padding:14,
-        borderRadius:10,
+        padding: 14,
+        borderRadius: 10,
         height: "auto",
         backgroundColor: "#DCEBFE"
-    },warningtitle:{
+    }, warningtitle: {
 
         display: "flex",
-        flexDirection:"row",
-        gap:6,
+        flexDirection: "row",
+        gap: 6,
         alignItems: "center"
-    },warningtext:{
-        lineHeight:21,
-        color:"#1E3FAE",
-        letterSpacing:0.2,
-        fontFamily:"PlusJakartaSans-Medium",
-        fontSize:13,
-    },warningmessage:{
-        lineHeight:21,
-        fontSize:12,
-        color:"#1E3FAE",
-        letterSpacing:0.3,
-        fontFamily:"PlusJakartaSans-Medium",
+    }, warningtext: {
+        lineHeight: 21,
+        color: "#1E3FAE",
+        letterSpacing: 0.2,
+        fontFamily: "PlusJakartaSans-Medium",
+        fontSize: 13,
+    }, warningmessage: {
+        lineHeight: 21,
+        fontSize: 12,
+        color: "#1E3FAE",
+        letterSpacing: 0.3,
+        fontFamily: "PlusJakartaSans-Medium",
         paddingHorizontal: 20,
+    }, callbox: {
+
+        elevation: 4,
+        backgroundColor: "#3083FF",
+
+        padding: 8,
+        borderRadius: 100
+    }, timelinecon: {
+
+        paddingHorizontal: 30,
+
+        display: "flex",
+
+
+        justifyContent: "center",
+
+    }, contactbtns: {
+
+        display: "flex",
+        flexDirection: "row",
+        gap: 5
     }
 });

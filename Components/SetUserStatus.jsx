@@ -1,7 +1,7 @@
 import React from 'react';
 import {View} from "react-native";
 
-function CurrentUserStatus(props) {
+function SetUserStatus(props) {
     return (
        <View>
 
@@ -9,4 +9,4 @@ function CurrentUserStatus(props) {
     );
 }
 
-export default CurrentUserStatus;
+export default SetUserStatus;

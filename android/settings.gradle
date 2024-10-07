@@ -1,4 +1,4 @@
-rootProject.name = 'test'
+rootProject.name = 'DyipSpot'
 
 dependencyResolutionManagement {
   versionCatalogs {

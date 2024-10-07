@@ -3,14 +3,18 @@ import {GestureHandlerRootView} from "react-native-gesture-handler";
 import Map from "../Components/map";
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import CurrentDriverProvider from "../Context/CurrentDriverProvider";
-0
+import {StatusBar} from "react-native";
+import JeepStatusProvider  from "../Context/JeepStatus";
+
 const MapTab = () => {
     return (
         <CurrentDriverProvider>
             <SafeAreaProvider>
                 <GestureHandlerRootView>
-                    <Map/>
-                    <RenderBottomSheet/>
+                    <JeepStatusProvider>
+                        <Map/>
+                        <RenderBottomSheet/>
+                    </JeepStatusProvider>
                 </GestureHandlerRootView>
             </SafeAreaProvider>
         </CurrentDriverProvider>

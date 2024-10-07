@@ -1,7 +1,6 @@
 import React, {useContext, useEffect, useState} from 'react';
 import {
     SafeAreaView,
-
     Image,
     Text,
     StyleSheet,
@@ -19,11 +18,10 @@ import SpeedImage from "../assets/speed.png"
 import passengers from "../assets/passenger.png"
 import arrivaltime from "../assets/arrivaltime.png"
 
-import {collection, addDoc, updateDoc, query, where, doc, getDocs} from "firebase/firestore";
+import {collection, addDoc, updateDoc, query,setDoc, where, doc, getDocs} from "firebase/firestore";
 import {db} from "../api/firebase-config"
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {CurrentUserContext} from "../Context/CurrentUserProvider";
-import useGoogleAuth from "../CustomHooks/useGoogleAuth";
 
 function WelcomePage(props) {
     const {setRefresh, refresh} = useContext(CurrentUserContext)
@@ -33,11 +31,17 @@ function WelcomePage(props) {
         redirectUri: makeRedirectUri({useProxy: true})
     });
 
+
+
+
+
     useEffect(() => {
+
         handleSignInWithGoogle();
     }, [response])
 
     const handleSignInWithGoogle = async () => {
+
         try {
 
             if (response?.type === "success") {
@@ -54,71 +58,57 @@ function WelcomePage(props) {
         }
     }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     const getUserInfo = async (token) => {
         try {
             const response = await fetch(process.env.EXPO_PUBLIC_GOOGLE_AUTH, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-
             const user = await response.json();
-
             if (user?.id) {
                 const userRef = collection(db, "users");
                 const driverRef = collection(db, "drivers");
-
-                // Check if user is a driver
                 const driverQuery = query(driverRef, where("id", "==", user.id));
                 const driverSnapshot = await getDocs(driverQuery);
 
                 if (!driverSnapshot.empty) {
-                    // User is a driver, update their information
                     const docId = driverSnapshot.docs[0].id;
                     try {
-                        await updateDoc(doc(db, "drivers", docId), {
-                            name: user?.name,
-                            last: user?.given_name,
-                            phoneNumber: null, // Ensure to get this value from your data source
-                            startpoint: null,   // Ensure to get this value from your data source
-                            endpoint: null,       // Ensure to get this value from your data source
-                            speed:null,              // Default speed if not available
-                            passengers: null ,    // Default passenger count if not available
-                            estimatedarrivaltime: null , // Default value
-                            latitude:null ,      // Default latitude if not available
-                            longitude: null ,    // Default longitude if not available
-                            imageUrl: user.picture,               // Assuming user.picture is the image URL
-                        });
                         user.role = "driver";
                         await AsyncStorage.setItem("UserCredentials", JSON.stringify(user));
-
                         console.log("Driver document updated with ID: ", docId);
                     } catch (e) {
                         console.error("Error updating driver document: ", e);
                     }
-
                 } else {
-                    // User is not found as a driver, check passengers
                     const passengerQuery = query(userRef, where("id", "==", user?.id));
                     const passengerSnapshot = await getDocs(passengerQuery);
-
                     if (!passengerSnapshot.empty) {
-                        // User is already a passenger, update their information
                         const docId = passengerSnapshot.docs[0].id;
-                        await updateDoc(doc(db, "users", docId), {
-                            first: user.name,
-                            ImageUrl: user.picture,
-                            last: user.given_name,
-                        });
                         console.log("Passenger document updated with ID: ", docId);
                         user.role = "passenger";
                         await AsyncStorage.setItem("UserCredentials", JSON.stringify(user));
 
                     } else {
-                        // User is not found in either collection, add as a passenger
                        await addDoc(userRef, {
                             id: user?.id,
                             first: user.name,
                             ImageUrl: user.picture,
-                            last: user.given_name,
+                            last: user?.given_name,
                             role: "passenger",
                             latitude: null,
                             longitude: null
@@ -129,6 +119,11 @@ function WelcomePage(props) {
 
                     }
                 }
+
+
+
+
+
             }
         } catch (e) {
             console.log("Error:", e);
@@ -186,7 +181,16 @@ function WelcomePage(props) {
                         {isLoading ? <ActivityIndicator size="small" color="#fff"/> :
                             <Text style={styles.GooglebuttonText}>Let's Get Started</Text>}
                     </TouchableOpacity>
+                    <View  style={styles.areyoudrivercon}>
+                        <Text style={styles.areyoudriver}>Are you a driver?</Text>
+                        <TouchableOpacity activeOpacity={1 }  >
+                        <Text style={styles.areyoudriverhighlight}>Apply now</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
+
+
+
             </View>
 
 
@@ -243,6 +247,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         display: 'flex',
+        gap:5,
         paddingHorizontal: 15,
         borderRadius: 10,
 
@@ -332,5 +337,27 @@ const styles = StyleSheet.create({
         position: "absolute",
         bottom: 160,
         objectFit: "contain"
-    }
-})
+    },areyoudriver:{
+        textAlign: "center",
+        fontSize: 12,
+        fontFamily: 'PlusJakartaSans-Medium',
+
+        color: "rgb(81,81,81)"
+
+
+    },areyoudriverhighlight:{
+
+        display:"flex",
+        justifyContent:"flex-end",
+        alignItems: "flex-end",
+        fontSize: 12,
+        fontFamily: 'PlusJakartaSans-Medium',
+        textAlign: "center",
+        color: "#3083FF",
+        textDecorationLine:"underline"
+    },areyoudrivercon:{
+display:"flex",
+        flexDirection:"row",
+gap:2
+
+}})

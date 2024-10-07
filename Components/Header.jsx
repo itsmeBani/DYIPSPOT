@@ -1,11 +1,18 @@
 import React, {useContext} from 'react';
-import {View, StyleSheet, Text, Image} from "react-native";
+import {View, StyleSheet, Text, Image, TouchableOpacity} from "react-native";
 import logo from "../assets/SpeedLoc (2).png"
 import UserImg from "../assets/userimg.png"
 import {CurrentUserContext} from "../Context/CurrentUserProvider";
 import CachedImage from 'react-native-expo-cached-image';
+import {useNavigation} from "expo-router";
 
 function Header(props) {
+    const navigation = useNavigation();
+
+    const goToSettings = () => {
+        navigation.navigate('Settings');
+    };
+
     const {CurrentUser} = useContext(CurrentUserContext)
     return (
         <View style={HeaderStyle.headerContainer}>
@@ -15,12 +22,12 @@ function Header(props) {
 
             </View>
 
-            <View >
+            <TouchableOpacity onPress={goToSettings} >
                 {CurrentUser &&
                     <CachedImage style={HeaderStyle.userImage}
                         source={{ uri: CurrentUser.picture }}
                     />}
-            </View>
+            </TouchableOpacity>
 
 
         </View>
