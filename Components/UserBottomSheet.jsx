@@ -1,81 +1,84 @@
-import {ActivityIndicator, Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View} from "react-native";
-import BottomSheet, {BottomSheetScrollView, BottomSheetView} from "@gorhom/bottom-sheet";
-import {CurrentDriverContext} from "../Context/CurrentDriverProvider";
-import React, {useContext, useEffect, useRef, useState} from "react";
-import time from "../assets/time-fast.png"
+import {ActivityIndicator, Image, Linking, StyleSheet, Text, TouchableOpacity, View} from "react-native";
+import BottomSheet, {BottomSheetScrollView} from "@gorhom/bottom-sheet";
+import React, {useContext, useEffect, useState} from "react";
 import passengers from "../assets/users-alt (1).png"
-import km from "../assets/tachometer-fastest.png"
-import CurrentlocImage from "../assets/map-marker.png"
 import Octicons from '@expo/vector-icons/Octicons';
 import {CurrentUserContext} from "../Context/CurrentUserProvider";
 import {JeepStatusContext} from "../Context/JeepStatus";
 import {db} from "../api/firebase-config";
-import {collection, getDocs, onSnapshot, query, where} from "firebase/firestore";
-import CachedImage from "react-native-expo-cached-image";
-import useReverseGeoCoding from "../CustomHooks/useReverseGeoCoding";
+import {collection, onSnapshot, query, where} from "firebase/firestore";
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import Timeline from "./Timeline";
 import Ionicons from '@expo/vector-icons/Ionicons';
-import {useSharedValue, withTiming} from "react-native-reanimated";
+import PopUpModal from "./PopUpModal";
+import {getRoute} from "../api/DirectionApi";
+import {IconStatusBox} from "./IconStatusBox";
 
 const UserBottomSheet = () => {
-    const {BottomSheetRef} = useContext(CurrentUserContext)
-    const [isOpen, setIsOpen] = useState(false)
-    const {jeepid, JeepStatusModal, setJeepStatusModal, closeAnimatedModal,} = useContext(JeepStatusContext)
-    const [jeepData, setJeepData] = useState(null);
-    const [longitude, setLongitude] = useState(null);
-    const [latitude, setLatitude] = useState(null);
-    const {Address} = useReverseGeoCoding(longitude, latitude);
-
+    const {BottomSheetRef,camera} = useContext(CurrentUserContext)
+    const {
+        jeepid,
+        setJeepStatusModal,
+        openModal,
+        FallowDriverLocation,
+        closeAnimatedModal,
+    } = useContext(JeepStatusContext)
+    const [jeepData, setJeepData] = useState();
     const [loading, setLoading] = useState(true)
-    useEffect(() => {
+    const fetchDriverData = () => {
 
-        const fetchDriverData = () => {
+        try {
+            setLoading(true);
+            const driverRef = collection(db, "drivers");
+            const driverQuery = query(driverRef, where("id", "==", jeepid));
 
-            setLoading(true)
+            return onSnapshot(driverQuery, async (snapshot) => {
+                if (!snapshot.empty) {
+                    const driver = snapshot.docs[0].data();
+                    console.log("Fetching data for jeep ID: ", jeepid);
 
-            try {
-                const driverRef = collection(db, "drivers");
-                const driverQuery = query(driverRef, where("id", "==", jeepid));
-                const unsubscribe = onSnapshot(driverQuery, async (snapshot) => {
-                    if (!snapshot.empty) {
-                        const driver = snapshot.docs[0].data();
-                        await setLongitude(driver?.longitude);
-                        await setLatitude(driver?.latitude);
+                  await  setJeepStatusModal({
+                        speed: driver.speed,
+                        currentLocation: [driver?.latitude, driver?.longitude],
+                        destination: driver?.endpoint,
+                        LastUpdated: driver?.LastUpdated,
+                        distance: driver?.endpoint && Object.keys(driver?.endpoint).length > 0
+                            ? await getRoute([driver?.longitude, driver?.latitude], driver?.endpoint)
+                            : null,
+                    });
 
-                        await setJeepStatusModal({
-                                speed: driver.speed,
-                                currentLocation: [driver?.longitude, driver?.latitude],
-                                destination: driver?.endpoint,
-                                distance: 0,
-                                EstimavetedArrivalTime: 0,
-                            }
-                        )
+                   await FallowDriverLocation(driver?.longitude, driver?.latitude,driver?.heading)
+                     setJeepData(driver);
+                    setLoading(false);
+                    openModal();
 
-                        setJeepData(driver);
-                        setLoading(false)
-                    } else {
-                        setJeepData(null);
-                    }
-                });
-                return () => unsubscribe();
-            } catch (error) {
-                console.error("Error fetching driver data: ", error);
-            } finally {
-            }
-        };
-
-        if (jeepid) {
-            fetchDriverData();
+                }
+            });
+        } catch (error) {
+            console.error("Error fetching driver data: ", error);
         }
+        finally {
+
+        }
+    };
+
+    useEffect(() => {
+        if (!jeepid) return;
+        const unsubscribe = fetchDriverData();
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
     }, [jeepid]);
 
 
     return (
         <>
+
+
+            <PopUpModal/>
             <BottomSheet
                 ref={BottomSheetRef}
-                snapPoints={['30%', '40%', '50%']}
+                snapPoints={['40%', '40%', '50%']}
                 enableOverDrag={false}
 
                 index={-1}
@@ -92,13 +95,16 @@ const UserBottomSheet = () => {
                                 <View style={{display: "flex", flexDirection: "row", gap: 10}}>
                                     <View style={UserBottomStyle.driverAvatar}>
 
-                                        {jeepData?.imageUrl && <CachedImage style={UserBottomStyle.AvatarImage}
-                                                                            source={{uri: jeepData?.imageUrl}}/>}
+                                        {jeepData?.imageUrl &&
+                                            <Image style={UserBottomStyle.AvatarImage}
+                                                   source={{uri: jeepData?.imageUrl}}/>}
+
+
                                     </View>
                                     <View style={UserBottomStyle.drivernameLabel}>
                                         <Text style={UserBottomStyle.drivernameLabeltext}> Driver</Text>
                                         <Text
-                                            style={UserBottomStyle.drivername}>{jeepData?.name ? jeepData?.name : "..Loading"}</Text>
+                                            style={UserBottomStyle.drivername} >{jeepData?.name ? jeepData?.name : "..Loading"}</Text>
 
                                     </View>
 
@@ -122,13 +128,18 @@ const UserBottomSheet = () => {
                             </View>
 
 
-                            {jeepData?.endpoint !==null && jeepData?.startpoint !==null?
+                            {jeepData?.endpoint !== null && jeepData?.startpoint !== null ?
                                 <View style={UserBottomStyle.timelinecon}>
                                     <Timeline Startpoint={jeepData?.startpoint} Destination={jeepData?.endpoint}/>
                                 </View> : null}
 
                             <View style={UserBottomStyle.StatusContainer}>
-                                <IconStatusBox icon={passengers} label={"No of Passengers"} txthighlight={10}
+                                <IconStatusBox icon={passengers} customStyle={{
+                                    container: {
+                                        paddingHorizontal: 32,
+                                        paddingBottom: 15
+                                    },
+                                }} label={"No of Passengers"} txthighlight={10}
                                                txt={"/22"}/>
                             </View>
 
@@ -146,7 +157,7 @@ const UserBottomSheet = () => {
 
                             </View>
 
-                        </View>: <ActivityIndicator color={"#3083FF"} size={30}/>
+                        </View> : <ActivityIndicator color={"#3083FF"} size={30}/>
                     }
                 </BottomSheetScrollView>
             </BottomSheet>
@@ -157,36 +168,6 @@ const UserBottomSheet = () => {
 
 export default UserBottomSheet;
 
-
-export const IconStatusBox = ({icon, label, txthighlight, txt, customStyle = {}}) => {
-    return (
-        <View style={[UserBottomStyle.StatusChildContainer, customStyle.container]}>
-            {icon && (
-                <Image
-                    style={[UserBottomStyle.statusIcon, customStyle.icon]}
-                    source={icon}
-                />
-            )}
-            <View>
-                <Text style={[UserBottomStyle.drivernameLabeltext, customStyle.label]}>{label}</Text>
-                <View style={customStyle.margintxt}>
-                    <Text
-                        style={[
-                            UserBottomStyle.drivername,
-                            {
-                                fontSize: customStyle?.fontSize ?? UserBottomStyle.drivername.fontSize,
-                                fontFamily: customStyle?.fontFamily ?? UserBottomStyle.drivername.fontFamily,
-                                color: customStyle?.color ?? UserBottomStyle.drivername.color,
-                            },
-                            customStyle.text
-                        ]}><Text style={[UserBottomStyle.txthighlight, customStyle.highlight]}>{txthighlight}</Text>
-                     {txt ?? "loading..."}</Text>
-
-                </View>
-            </View>
-        </View>
-    );
-};
 
 const UserBottomStyle = StyleSheet.create({
     contentContainer: {
@@ -246,6 +227,7 @@ const UserBottomStyle = StyleSheet.create({
 
         fontFamily: "PlusJakartaSans-Medium",
     }, drivername: {
+        width:150,
         color: "rgba(88,87,87,0.88)",
         fontSize: 13,
         fontFamily: "PlusJakartaSans-Bold",
@@ -297,13 +279,7 @@ const UserBottomStyle = StyleSheet.create({
         fontSize: 14,
         fontWeight: "medium",
     },
-    StatusContainer: {
-
-        paddingHorizontal: 32,
-        paddingBottom: 15,
-        display: "flex",
-        gap: 15,
-    }, StatusChildContainer: {
+    StatusChildContainer: {
         display: "flex",
         flexDirection: "row",
         gap: 10,

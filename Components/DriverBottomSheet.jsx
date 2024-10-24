@@ -4,46 +4,90 @@ import BottomSheet, {BottomSheetScrollView} from '@gorhom/bottom-sheet';
 import {CurrentDriverContext} from '../Context/CurrentDriverProvider';
 
 import SimpleLineIcons from '@expo/vector-icons/SimpleLineIcons';
-import {collection, getDocs, updateDoc, query, where, doc} from "firebase/firestore";
+import {collection, getDocs, updateDoc, query, where, doc, addDoc, serverTimestamp} from "firebase/firestore";
 import {db} from "../api/firebase-config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {CurrentUserContext} from "../Context/CurrentUserProvider";
 import {MapboxPlacesAutocomplete} from "./MapboxPlacesAutocomplete";
+import {getUserDocRefById} from "../CustomHooks/CustomFunctions/ReusableFunctions";
 
 
 function DriverBottomSheet(props) {
     const [startPoint, setStartPoint] = useState(null);
-    const [destination, setDestination] = useState(null);
+    const [destination, setDestination] = useState([]);
     const {BottomSheetRef} = useContext(CurrentDriverContext);
 
     const {camera, CurrentUser} = useContext(CurrentUserContext)
 
-
+    const [isLoading,setIsLoading]=useState(false)
     const HandleSubmitRoute = async () => {
-        if (startPoint && destination) {
-            const driverRef = collection(db, "drivers");
-            const driverQuery = query(driverRef, where("id", "==", CurrentUser?.id));
-            const driverSnapshot = await getDocs(driverQuery);
-            if (!driverSnapshot.empty) {
-                const docId = driverSnapshot.docs[0].id;
-                try {
-                    await updateDoc(doc(db, "drivers", docId), {
-                        startpoint: startPoint?.features[0]?.properties?.coordinates,
-                        endpoint: destination?.features[0]?.properties?.coordinates,
-                    })
-                } catch (e) {
-                    console.error("Error updating driver document: ", e);
-                } finally {
-                    setStartPoint(null)
-                    setDestination(null)
-                }
 
+        const {id, role} = CurrentUser;
+
+        const driverRef = await getUserDocRefById(CurrentUser?.id, "drivers")
+        const DriverDocRef = await getUserDocRefById(id, "drivers");
+        const travelHistoryRef = collection(db, 'drivers', DriverDocRef.id, 'Trips');
+
+       if (startPoint === null || destination === null){
+           alert("invalid")
+           return
+       }
+
+        try {
+            console.log(startPoint)
+            await updateDoc(driverRef, {
+
+                startpoint: {
+                    latitude: startPoint.startPoint[1],
+                    longitude: startPoint.startPoint[0]
+                },
+                endpoint: {
+                    latitude: destination.EndPoint[1],
+                    longitude: destination.EndPoint[0]
+                },
+
+            })
+
+            const Trips={
+                startpoint: {
+                    latitude: startPoint.startPoint[1],
+                    longitude: startPoint.startPoint[0]
+                },
+                endpoint: {
+                    latitude: destination.EndPoint[1],
+                    longitude: destination.EndPoint[0]
+                },
+                StartPointAddress:{
+                    Locality:startPoint.Locality,
+                    Region:startPoint.Region,
+                    PlaceName:  startPoint.PlaceName
+                },
+               EndPointAddress:{
+                   Locality:destination.Locality,
+                   Region:destination.Region,
+                   PlaceName:  destination.PlaceName
+               },
+                date:serverTimestamp(),
+                id:CurrentUser.id
             }
-        } else {
-            alert("invalid")
-        }
-    }
 
+            try {
+                await addDoc(travelHistoryRef, Trips);
+                console.log('Travel history added successfully!');
+            } catch (error) {
+                console.error('Error updating driver document: ', error);
+            }
+
+           alert("done updating driver document: ");
+            setStartPoint(null)
+            setDestination(null)
+        } catch (e) {
+           alert(e)
+            console.error("Error updating driver document: ", e);
+        }
+
+
+    }
 
 
     //temporary suggested  =====> convert this to analysis
@@ -90,7 +134,12 @@ function DriverBottomSheet(props) {
                             id="origin"
                             placeholder="My location"
                             onPlaceSelect={(data) => {
-                                console.log(data)
+                                setStartPoint({
+                                    startPoint: data?.center,
+                                    Locality:data?.text,
+                                    Region: data?.context[1]?.text,
+                                    PlaceName:  data?.context[0]?.text
+                                })
                             }}
                             onClearInput={({id}) => {
                             }}
@@ -109,7 +158,12 @@ function DriverBottomSheet(props) {
                             id="Destination"
                             placeholder="Destination"
                             onPlaceSelect={(data) => {
-                                console.log(data)
+                                setDestination({
+                                    EndPoint: data?.center,
+                                    Locality:data?.text,
+                                    Region: data?.context[1]?.text,
+                                    PlaceName:  data?.context[0]?.text
+                                })
                             }}
                             onClearInput={({id}) => {
                             }}
@@ -122,7 +176,7 @@ function DriverBottomSheet(props) {
                     </View>
                     <SuggestedPlace/>
                     <View style={{paddingHorizontal: 20, paddingTop: 10,}}>
-                        <TouchableOpacity activeOpacity={1}
+                        <TouchableOpacity activeOpacity={0.8} onPress={HandleSubmitRoute} disabled={isLoading}
                                           style={DriverBottomSheetStyle.btn}><Text
                             style={DriverBottomSheetStyle.btntxt}>Set Route</Text></TouchableOpacity>
                     </View>
@@ -157,7 +211,6 @@ const DriverBottomSheetStyle = StyleSheet.create({
         display: 'flex',
         flexDirection: "column",
         flex: 1,
-
 
 
     },

@@ -20,24 +20,59 @@ import {promptForEnableLocationIfNeeded} from "react-native-android-location-ena
 
 import {isLocationEnabled} from 'react-native-android-location-enabler';
 import {JeepStatusContext} from "../Context/JeepStatus";
+import {CurrentUserContext} from "../Context/CurrentUserProvider";
 
 
-function CategoryButton() {
+function CategoryButton({Mylocation, setMylocation}) {
+    const {camera, setFallowCurrentUser} = useContext(JeepStatusContext)
+    const {
+        setIsPassenger,
+        setIsJeeps,
+        isPassenger,
+        isJeeps,
+        hideRouteline,
+        sethideRouteline
+    } = useContext(JeepStatusContext)
 
-    const {setIsPassenger, setIsJeeps,isPassenger, isJeeps,hideRouteline, sethideRouteline} = useContext(JeepStatusContext)
     function showPassenger() {
+        setFallowCurrentUser(false)
+        setMylocation(false)
+        camera.current?.setCamera({
 
-        sethideRouteline(false)
+                centerCoordinate: [120.49737362993602, 16.91644986476775],
+                pitch: 70,
+                heading: 300,
+                zoomLevel: 13,
+                animationMode: "flyTo"
+
+            }
+        )
+        sethideRouteline(true)
         setIsPassenger(true)
+        setMylocation(false)
         setIsJeeps(false)
     }
 
     function showJeeps() {
+        setFallowCurrentUser(false)
+        setMylocation(false)
+        camera.current?.setCamera({
+
+                centerCoordinate: [120.49737362993602, 16.91644986476775],
+                pitch: 70,
+                heading: 300,
+                zoomLevel: 13,
+                animationMode: "flyTo"
+
+            }
+        )
 
         if (!isPassenger) {
             return
         }
+        sethideRouteline(false)
         setIsJeeps(!isJeeps)
+        setMylocation(false)
         setIsPassenger(false)
     }
 
@@ -65,18 +100,34 @@ function CategoryButton() {
     }
 
     async function handleEnabledPressed() {
+
         if (Platform.OS === 'android') {
             try {
-                const enableResult = await promptForEnableLocationIfNeeded();
-                if (enableResult === "enabled") {
-                    setisLocationEnabled(true)
+                const response = await CheckifUserEnabledGps()
+                if (response) {
+                    setMylocation(!Mylocation)
+                 setFallowCurrentUser(true)
+
                 }
+
             } catch (error) {
                 if (error) {
                     console.log("denied")
                 }
             }
         }
+    }
+
+
+    const CheckifUserEnabledGps = async () => {
+
+            const enableResult = await promptForEnableLocationIfNeeded();
+
+            if (enableResult === "enabled" || enableResult === "already-enabled") {
+                return true
+            }
+
+
     }
 
 
@@ -126,15 +177,19 @@ function CategoryButton() {
             <View style={CategoryButtonStyle.statusLocation}>
 
                 <TouchableOpacity activeOpacity={1} onPress={handleEnabledPressed}
-                                  style={[CategoryButtonStyle.islocation, {backgroundColor: islocationEnabled ? "#3083FF" : "white"}]}>
+                                  style={[CategoryButtonStyle.islocation, {backgroundColor: islocationEnabled && Mylocation ? "#3083FF" : "white"}]}>
 
                     {/*<MaterialIcons name="location-disabled" size={20} color="#605f5f" />*/}
 
 
-                    {islocationEnabled ?
-                        <MaterialIcons name="my-location" size={20} color={islocationEnabled ? "white" : "#605f5f"}/> :
+                    {islocationEnabled  && Mylocation ?
+                        <MaterialIcons name="my-location" size={20} color={islocationEnabled  && Mylocation?  "white" : "#605f5f"}/> :
                         <MaterialIcons name="location-disabled" size={20}
-                                       color={islocationEnabled ? "white" : "#605f5f"}/>}
+                                       color={islocationEnabled  && Mylocation ? "white" : "#605f5f"}/>}<Text style={{
+                    color: islocationEnabled  && Mylocation? "white" : "#605f5f",
+                    fontFamily: "PlusJakartaSans-Medium",
+                    fontSize: 12
+                }}></Text>
 
                 </TouchableOpacity>
 
@@ -215,10 +270,13 @@ const CategoryButtonStyle = StyleSheet.create({
         flexDirection: "row",
         gap: 7
     }, islocation: {
-
+        alignItems: "center",
         backgroundColor: "#fff",
         paddingVertical: 7,
         elevation: 3,
+        gap: 2,
+        display: "flex",
+        flexDirection: "row",
         borderRadius: 10,
         paddingHorizontal: 9,
     }

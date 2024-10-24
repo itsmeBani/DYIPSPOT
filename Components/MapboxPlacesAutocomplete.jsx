@@ -1,5 +1,5 @@
 import usePlacesAutocomplete from "../CustomHooks/usePlacesAutocomplete";
-import {StyleSheet, Text, TextInput, TouchableOpacity, View} from "react-native";
+import {ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View} from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Octicons from "@expo/vector-icons/Octicons";
 import React from "react";
@@ -31,6 +31,7 @@ export const MapboxPlacesAutocomplete = ({
                 {...{...placesAutocomplete, placeholder}}
                 style={[styles.input, inputStyle]}
                 className={inputClassName}
+                placeholderTextColor={"rgba(96,95,95,0.49)"}
             />
             {placesAutocomplete.value && (
                 <TouchableOpacity
@@ -57,7 +58,7 @@ export const MapboxPlacesAutocomplete = ({
 
 const PlaceSuggestionList = ({placesAutocomplete, onPlaceSelect}) => {
     return (
-        <View style={styles.suggestionList}>
+        <ScrollView style={styles.suggestionList}>
             {placesAutocomplete.suggestions.map((suggestion, index) => {
                 return (
                     <TouchableOpacity
@@ -79,7 +80,7 @@ const PlaceSuggestionList = ({placesAutocomplete, onPlaceSelect}) => {
                 </Text>
                 {/*<Image source={mapboxLogoUri} style={styles.creditImage} />*/}
             </View>
-        </View>
+        </ScrollView>
     );
 };
 
@@ -102,7 +103,7 @@ const styles = StyleSheet.create({
 
         display: "flex",
         width: "100%",
-        zIndex: -1222,
+        zIndex: 0,
         fontFamily: 'PlusJakartaSans-Medium',
         borderRadius: 10,
         paddingHorizontal: 15,
@@ -113,7 +114,7 @@ const styles = StyleSheet.create({
     suggestionList: {
         position: "absolute",
 
-        zIndex: 20,
+        zIndex: -1,
         paddingHorizontal: 10,
         paddingVertical: 5,
         backgroundColor: "#fff",

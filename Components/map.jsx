@@ -14,20 +14,21 @@ import {CurrentUserContext} from "../Context/CurrentUserProvider";
 import useFetchLocation from "../CustomHooks/useFetchLocation";
 import DirectionButton from "./DirectionButton";
 import {JeepStatusContext} from "../Context/JeepStatus";
-import PopUpModal from "./PopUpModal";
-
 
 const Map = () => {
     const [hasLocationPermission, setHasLocationPermission] = useState(false);
-    const {camera, CurrentUser} = useContext(CurrentUserContext)
+    const { CurrentUser} = useContext(CurrentUserContext)
     const [isMapLoaded, setIsMapLoaded] = useState(false)
-
+    const {FallowCurrentUser,setFallowCurrentUser}=useContext(JeepStatusContext)
     const [userLocationData] = useFetchLocation("users");
-    const {JeepStatusModal, setJeepStatusModal,isPassenger, isJeeps, line,   hideRouteline, sethideRouteline, setline} = useContext(JeepStatusContext)
+    const {JeepStatusModal, setJeepStatusModal,isPassenger, isJeeps, line,camera,   hideRouteline, sethideRouteline, setline} = useContext(JeepStatusContext)
     const [driverLocationData] = useFetchLocation("drivers");
+    const [Mylocation,setMylocation]=useState(false)
+    const FilterCurrentUser = userLocationData?.filter(user => user?.id !== CurrentUser?.id);
+
     const PassengerLocationMarker = {
         type: 'FeatureCollection',
-        features: userLocationData?.map(user => ({
+        features: FilterCurrentUser?.map(user => ({
             type: 'Feature',
             properties: {
                 icon: 'pin', // Use ImageUrl directly for the icon
@@ -42,12 +43,14 @@ const Map = () => {
             },
         })),
     };
+    const FilterCurrentDriver = driverLocationData?.filter(user => user?.id !== CurrentUser?.id);
+
     const DriverLocationMarker = {
         type: 'FeatureCollection',
-        features: driverLocationData?.map(user => ({
+        features: FilterCurrentDriver?.map(user => ({
             type: 'Feature',
             properties: {
-                   icon: 'pin1',  // Use ImageUrl directly for the icon
+                icon: 'pin1',  // Use ImageUrl directly for the icon
                 id: user?.id,
                 name: user?.name,
                 startpoint: user?.startpoint,
@@ -64,53 +67,6 @@ const Map = () => {
 
 
 
-  const  [EstimatedArrivalTime,setEstimatedArrivalTime]=useState()
-  const [Distance,setDistance] = useState()
-
-    useEffect(() => {
-        async function RenderRoute() {
-            const startPoint = JeepStatusModal?.currentLocation || [0,0]
-            const endPoint = JeepStatusModal?.destination || [0,0]
-            try {
-                const response = await getRoute(startPoint, endPoint)
-
-
-              await  setEstimatedArrivalTime(response.routes[0].duration)
-               await setDistance(response.routes[0].distance)
-                await setline(response.routes[0].geometry.coordinates)
-
-
-            } catch (e) {
-                await setline(null)
-
-            }
-        }
-        if (!setJeepStatusModal?.currentLocation && setJeepStatusModal?.endpoint) {
-            setJeepStatusModal({})
-            return
-        }
-        RenderRoute().then()
-    },[JeepStatusModal])
-
-
-    const onPointPressPassnger = () => {
-        setline(null)
-    }
-    const handleMapFullyRendered = () => {
-        console.log("Map has fully rendered!");
-        setIsMapLoaded(true); // You can use this to hide any loading indicator
-    };
-
-    const CustomMarker = ({coordinate, iconUrl}) => {
-        return (
-            <MapboxGL.MarkerView coordinate={coordinate} anchor={{x: 0.5, y: 1}}>
-                <MapboxGL.Images source={{uri: iconUrl}} style={{width: 30, height: 30}}/>
-            </MapboxGL.MarkerView>
-        );
-    };
-
-
-
     return (
         <GestureHandlerRootView style={styles.container}>
 
@@ -119,17 +75,21 @@ const Map = () => {
                 style={styles.map}
                 styleURL={"mapbox://styles/mapbox/streets-v12"}
                 pitchEnabled={true}
-                onDidFinishRenderingMapFully={() => {
-                    alert("")
-                }}
+                onDidFinishRenderingMap={(e)=>{console.log(e)}}
                 userLocationVisible={hasLocationPermission}
                 scaleBarEnabled={false}
                 attributionEnabled={false}
                 logoEnabled={true}
+                onCameraChanged={state => {
+                    if (state.gestures.isGestureActive){
+                        setFallowCurrentUser(false)
+                    }
+                }
+                }
                 logoPosition={{top: 10, right: 10}}
-
             >
-
+                {Mylocation &&   <LocationPuck  scale={0.5}  puckBearingEnabled={true}  topImage={CurrentUser.picture}   puckBearing={"heading"} visible={true}   pulsing={{isEnabled:true,radius:60,color:"#3083FF"}}/>
+                }
 
                 <Camera
                     heading={-50}
@@ -139,7 +99,8 @@ const Map = () => {
                     pitch={60}
                     zoomLevel={16}
                     animationMode="flyTo"
-                    followUserLocation={false}
+                    followUserLocation={FallowCurrentUser}
+
                     followZoomLevel={16.8}
                 />
                 {driverLocationData && isJeeps ?
@@ -196,7 +157,7 @@ const Map = () => {
 
                     </MapboxGL.ShapeSource> : null}
                 {userLocationData && isPassenger ?
-                    <MapboxGL.ShapeSource id="passengermarkerSource" cluster={true} onPress={onPointPressPassnger}
+                    <MapboxGL.ShapeSource id="passengermarkerSource" cluster={true}
                                           shape={PassengerLocationMarker}>
                         <MapboxGL.Images images={{pin}}/>
                         <MapboxGL.SymbolLayer
@@ -240,7 +201,7 @@ const Map = () => {
                     </MapboxGL.ShapeSource> : null}
 
 
-                { hideRouteline  && line ?
+                { JeepStatusModal?.distance && !hideRouteline  ?
                     <MapboxGL.ShapeSource
 
                         id="routeSource"
@@ -250,7 +211,7 @@ const Map = () => {
                             type: 'Feature',
                             geometry: {
                                 type: 'LineString',
-                                coordinates: line,
+                                coordinates: JeepStatusModal?.distance?.routes[0].geometry.coordinates ,
                             },
                         }}>
                         <MapboxGL.LineLayer
@@ -266,19 +227,11 @@ const Map = () => {
             </MapboxGL.MapView>
 
 
-            <CategoryButton
+            <CategoryButton  Mylocation={Mylocation} setMylocation={setMylocation}
             />
 
 
             {CurrentUser.role === "driver" && <DirectionButton/>}
-
-
-                                              <PopUpModal     data={JeepStatusModal}
-                                              EstimatedArrivalTime={EstimatedArrivalTime}
-                                              Distance={Distance}/>
-
-
-
 
 
         </GestureHandlerRootView>

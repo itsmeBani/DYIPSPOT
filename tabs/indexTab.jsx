@@ -16,13 +16,14 @@ import PermissionAndTaskManagerProvider, {
     PermissionAndTaskManagerContext
 } from "../Context/PermissionAndTaskManagerProvider";
 import HomeTab from "./HomeTab";
+import RequestDriverTrckingBottomSheet from "./SettingsTabsComponent/RequestDriverTrckingBottomSheet";
+import {GestureHandlerRootView} from "react-native-gesture-handler";
 
 
 function IndexTab(props) {
     const Tab = createBottomTabNavigator();
 
     const TabStyle = {
-
 
         tabBarLabelStyle: {
             fontSize: 9,
@@ -63,8 +64,8 @@ function IndexTab(props) {
         <PermissionAndTaskManagerProvider>
             <StatusBar backgroundColor={"white"} barStyle={"dark-content"}/>
             <SafeAreaProvider>
-                <NavigationContainer independent={true}>
-                  <Tab.Navigator screenOptions={({route}) => ({
+                <NavigationContainer  independent={true}>
+                  <Tab.Navigator  screenOptions={({route}) => ({
                       tabBarIcon: ({focused, color, size}) => {
                               if (route.name === 'Home') {
                               return <Foundation name="home" size={20} color={color}/>
@@ -88,7 +89,7 @@ function IndexTab(props) {
 
                                       },
                                       tabBarLabelPosition:"below-icon",
-                                      headerShown: true,
+                                      headerShown: false,
                                       headerTintColor: '#333'
                                   }}
 
@@ -111,10 +112,13 @@ function IndexTab(props) {
                                   }} component={MapTab}/>
 
 
-                      <Tab.Screen name="Settings" component={SettingsTab}/>
+                      <Tab.Screen name="Settings"  component={SettingsTab}/>
                   </Tab.Navigator>
               </NavigationContainer>
             </SafeAreaProvider>
+
+
+
         </PermissionAndTaskManagerProvider>
     );
 }

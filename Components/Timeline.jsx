@@ -2,23 +2,33 @@ import {MaterialIcons} from "@expo/vector-icons";
 import StepIndicator from "react-native-step-indicator";
 import {Dimensions, StyleSheet, Text, View} from "react-native";
 import useReverseGeoCoding from "../CustomHooks/useReverseGeoCoding";
+import {useContext, useEffect} from "react";
+import {PermissionAndTaskManagerContext} from "../Context/PermissionAndTaskManagerProvider";
 
 const {width, height} = Dimensions.get("screen");
 
 function Timeline({Startpoint,Destination}) {
 
 
+    const {Address: StartpointAdress,setCoordinates:setStartPointCoordinates} = useReverseGeoCoding(Startpoint?.longitude, Startpoint?.latitude);
 
-    const {Address: StartpointAdress} = useReverseGeoCoding(Startpoint?.longitude, Startpoint?.latitude);
+    const {Address: DestinationAddress,setCoordinates:setDestinationPointCoordinates} = useReverseGeoCoding(Destination?.longitude, Destination?.latitude);
 
-    const {Address: DestinationAddress} = useReverseGeoCoding(Destination?.longitude, Destination?.latitude);
+
+
+    useEffect(()=>{
+
+
+        setStartPointCoordinates({ longitude: Startpoint?.longitude, latitude: Startpoint?.latitude });
+        setDestinationPointCoordinates({ longitude: Destination?.longitude, latitude: Destination?.latitude });
+
+
+    },[Startpoint,Destination])
+
 
 
 
     const getStepIndicatorIconConfig = ({position, stepStatus,}) => {
-
-
-
         const iconConfig = {
             name: 'feed',
             color: stepStatus === 'finished' ? '#555454' : '#ffffff',
@@ -127,7 +137,7 @@ function Timeline({Startpoint,Destination}) {
                 stepCount={2}
                 customStyles={customStyles}
                 direction={"vertical"}
-                currentPosition={0}
+                currentPosition={1}
                 renderStepIndicator={renderStepIndicator}
                 labels={labels}
                 renderLabel={getStepLabels}

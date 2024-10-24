@@ -1,23 +1,84 @@
-import React, {useContext, useEffect} from 'react';
+import React, {useContext, useEffect, useRef, useState} from 'react';
 
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import {collection, doc, onSnapshot} from "firebase/firestore";
+import {addDoc, collection, doc, getDocs, onSnapshot, orderBy, query, setDoc, where} from "firebase/firestore";
 import {db} from "../api/firebase-config";
 import useFetchLocation from "../CustomHooks/useFetchLocation";
 import {CurrentUserContext} from "../Context/CurrentUserProvider";
 import {
     View,
-    Text,
-    StyleSheet, ScrollView,
+    Text, Image,
+    StyleSheet, ScrollView, AppState, Button, SafeAreaView, Dimensions, TouchableOpacity,
 
 } from 'react-native';
 import {MapboxPlacesAutocomplete} from "../Components/MapboxPlacesAutocomplete";
-
-
+import JeepCategoryAnalysis from "../Components/JeepCategoryAnalysis";
+import {GestureHandlerRootView} from "react-native-gesture-handler";
+import Jeep from "../assets/jeep.png"
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Carousel from 'react-native-reanimated-carousel';
+import {LinearGradient} from "expo-linear-gradient";
+import {PermissionAndTaskManagerContext} from "../Context/PermissionAndTaskManagerProvider";
+import useFetchDriversOnce from "../CustomHooks/useFetchDriversOnce";
+import SimpleLineIcons from '@expo/vector-icons/SimpleLineIcons';
+import {getUserDocRefById} from "../CustomHooks/CustomFunctions/ReusableFunctions"
+import Ionicons from '@expo/vector-icons/Ionicons';
+import {CarouselSkeleton} from "../Components/Loaders";
 function HomeTab(props) {
+
     const {CurrentUser} = useContext(CurrentUserContext)
+    const width = Dimensions.get('window').width;
+    const height = Dimensions.get('window').height;
+
+    const {LocationData, loading, error} = useFetchDriversOnce();
+
+
+    async function getTableDataFromOneTable(id, tableNAME, OrderBy) {
+        const DriverDocRef = await getUserDocRefById(id, "drivers");
+        const travelHistoryRef = collection(db, 'drivers', DriverDocRef?.id, tableNAME);
+        const orderedQuery = query(travelHistoryRef, orderBy(OrderBy, 'desc'));
+        const querySnapshot = await getDocs(orderedQuery);
+        const Data = querySnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+
+        return {Data}
+    }
+
+
+    const mappedDrivers = LocationData?.map((driver) => ({
+        id: driver?.id,
+        name: driver?.name,
+        latitude: driver?.latitude,
+        longitude: driver?.longitude,
+        status: driver?.status,
+        address: driver?.address,
+        imageUrl: driver?.imageUrl,
+        speed: driver?.speed,
+        jeepName: driver?.jeepName,
+        heading: driver?.heading,
+        estimatedArrival: driver?.estimatedarrivaltime,
+        passengers: driver?.passengers,
+        phoneNumber: driver?.phoneNumber,
+        JeepImages: driver?.jeepImages,
+    })) || []
+
+
+    const [driversId, setDriversId] = useState(null)
+    const [activeIndex, setActiveIndex] = useState(0);
+const [selectedImage,setSelectedImage] = useState()
+
+
+
+    const selecImagePreview=(url)=>{
+
+    setSelectedImage(url)
+
+
+    }
     return (
-        <>
+
+        <View style={{flex:1}}>
+
+
             <View style={HomeTabStyle.ParentStyle}>
                 <View style={HomeTabStyle.GreetingsconTxt}>
                     <Text style={HomeTabStyle.GreetingsTxt}>Hi {CurrentUser?.name}, </Text>
@@ -25,36 +86,111 @@ function HomeTab(props) {
                         style={HomeTabStyle.Greetingspline}>{CurrentUser.role === "passenger" ? "Let’s track your ride!" : "Track your passengers, stay on route!"} </Text>
                 </View>
 
-                <ScrollView bounces={true} horizontal={true} showsVerticalScrollIndicator={false}
-                            contentContainerStyle={HomeTabStyle.JeepBox}>
-
-                    {/*<View style={HomeTabStyle.subJeepBox}>*/}
-                    {/*    <View style={HomeTabStyle.subJeepBoxChild}>*/}
-                    {/*        <View style={HomeTabStyle.driverName}><Text style={HomeTabStyle.driverNameheading}>Guillermo Sabado</Text></View>*/}
-
-                    {/*        <View style={HomeTabStyle.jeepdescription}><Text>test</Text></View>*/}
-
-                    {/*    </View>*/}
+                {loading ? <CarouselSkeleton/> :
 
 
-                    {/*</View>*/}
+                    <Carousel
+                        loop
 
-                    {/*<View style={HomeTabStyle.subJeepBox}>*/}
-                    {/*    <View style={HomeTabStyle.subJeepBoxChild}>*/}
-                    {/*        <View style={HomeTabStyle.driverName}><Text style={HomeTabStyle.driverNameheading}>Guillermo Sabado</Text></View>*/}
+                        mode={"parallax"}
+                        width={width}
+                        autoPlay={false}
+                        overscrollEnabled={true}
+                        pagingEnabled={true}
+                        data={mappedDrivers}
+                        snapEnabled
 
-                    {/*        <View style={HomeTabStyle.jeepdescription}><Text>test</Text></View>*/}
+                        onSnapToItem={(index) =>{
+                            setSelectedImage(null)
+                            setActiveIndex(index)
 
-                    {/*    </View>*/}
+                        }}
+                        renderItem={({item, index}) => (
+                            <View style={{
+                                borderRadius: 20,
+                                flex:1,
+                                marginHorizontal: 6
+                            }}>
+                                <LinearGradient
+                                    colors={['#48B2FC', '#3297FF', '#1C7FFF']}
+                                    start={[0, 0]}
+                                    end={[0, 0.9]}
+
+                                    style={{
+                                        flex:1,
+                                        borderRadius: 20,
+                                        overflow: 'hidden',
+                                        padding: 20,
+                                        display: "flex",
+                                        flexDirection: "column",
 
 
-                    {/*</View>*/}
+                                    }}
+                                >
 
-                </ScrollView>
+                                    {!selectedImage ||  index !== activeIndex ?
+                                        <View>
+                                            <View
+                                                style={{flexDirection:"row",gap:20}}>
+
+                                                <Image source={{uri:item?.imageUrl}} style={{height: 90, width: 90 ,borderRadius:20,borderWidth:5, borderColor:"white"}}/>
 
 
+                                                <View>
+
+                                                    <Text style={HomeTabStyle.name}>{item?.name}</Text>
+                                                    <Text style={HomeTabStyle.txt}>Jeepney Driver</Text>
+                                                    <Text  style={HomeTabStyle.txt}>for hire</Text>
+                                                </View>
+                                            </View>
+                                            <View  style={{paddingTop:10,gap:3}}>
+                                                <View style={{flexDirection:"row",gap:6}}><Ionicons name="home-outline" size={20} color="white" /><Text style={HomeTabStyle.txt2}>{item?.address}</Text></View>
+                                                <View style={{flexDirection:"row",gap:6}}><SimpleLineIcons name="phone" size={20} color="white" /><Text style={HomeTabStyle.txt2}>{item?.phoneNumber}</Text></View>
+                                                <View style={{flexDirection:"row",gap:6}}><MaterialCommunityIcons name="jeepney" size={20} color="white" /><Text style={HomeTabStyle.txt2}>{item?.jeepName}</Text></View>
+
+                                            </View>
+                                        </View>
+
+                                        : index === activeIndex &&  <Image source={{uri:selectedImage}} style={{flex:1 ,borderRadius:10,borderWidth:2, borderColor:"white"}}/>
+
+
+
+                                    }
+                                    <View  style={{paddingTop:10,gap:3,flexDirection:"row",justifyContent:"flex-end"}}>
+                                        {item?.JeepImages  && !Object.keys(item?.JeepImages).length <= 0 &&
+                                            item?.JeepImages.map((url,index)=>{
+                                                return (
+                                                    <TouchableOpacity activeOpacity={0.8} onPress={()=>{
+                                                        selecImagePreview(url)
+
+                                                    }}  key={index}>
+                                                        <Image source={{uri:url}} style={{height: 50, width: 50 ,borderRadius:10,borderWidth:2, borderColor:"white"}}/>
+                                                    </TouchableOpacity>
+                                                )
+                                            })
+                                         }
+
+                                    </View>
+
+
+
+
+                                </LinearGradient>
+
+                            </View>
+
+
+                        )}
+                    />
+
+                }
             </View>
-        </>
+            <JeepCategoryAnalysis getTableDataFromOneTable={getTableDataFromOneTable}
+                                  data={mappedDrivers[activeIndex]}/>
+
+
+        </View>
+
     );
 }
 
@@ -63,58 +199,47 @@ const HomeTabStyle = StyleSheet.create({
     ParentStyle: {
         backgroundColor: "white",
         flex: 1,
-        gap: 20,
 
-        paddingHorizontal: 15,
-        paddingVertical: 10,
+
     },
     GreetingsTxt: {
+
         fontFamily: "PlusJakartaSans-Bold",
         fontSize: 20,
         color: "rgba(0,0,0,0.72)"
-    }, GreetingsconTxt: {}, Greetingspline: {
+    }, GreetingsconTxt: {
+        paddingHorizontal: 15,
+        paddingVertical: 10,
+
+    }, Greetingspline: {
         fontFamily: "PlusJakartaSans-Medium",
         fontSize: 13,
         color: "rgba(0,0,0,0.68)"
-    }, JeepBox: {
-        display: "flex",
-        gap: 40,
-        padding: 2,
+    }, itemname: {
 
-    }, subJeepBox: {
-
-
-
-        borderRadius: 15,
-        backgroundColor: "#3083FF",
-
-
-    },
-    subJeepBoxChild: {
-
-        display: "flex",
-        position: "relative",
-        flex: 2
-
-    }, jeepdescription: {
-        backgroundColor: "white",
-        borderTopRightRadius: 15,
-        height: "100%",
-        borderTopLeftRadius: 15,
-
-    }, driverName: {
-
-        overflow: "hidden",
-        paddingHorizontal: 20,
-        paddingVertical: 15,
-    }, driverNameheading: {
-
-        color: "white",
-        letterSpacing: 0.5,
         fontFamily: "PlusJakartaSans-Bold",
-    }, test: {
+        fontSize: 20,
+        color: "rgb(255,255,255)"
+    },
+    JeepBox: {
+        flex: 1,
+        backgroundColor: "white"
+    },name:{
+        fontFamily: "PlusJakartaSans-Bold",
+        fontSize: 20,
+        color: "rgb(255,255,255)"
 
-        color: "#6b2cd4"
+    },txt: {
+
+        fontFamily: "PlusJakartaSans-Regular",
+        fontSize: 13,
+        color: "rgb(255,255,255)"
+
+    },txt2:{
+
+        fontFamily: "PlusJakartaSans-Regular",
+        fontSize: 15,
+        color: "rgb(255,255,255)"
     }
 })
 

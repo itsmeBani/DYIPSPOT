@@ -12,6 +12,7 @@ const RenderBottomSheet = () => {
             <>
             {role === "passenger"?
                 <>
+
                     <JeepsBottomSheet/>
                     <UserBottomSheet/>
                 </>

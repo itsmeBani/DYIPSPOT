@@ -1,79 +1,79 @@
-import React from 'react';
-import { View, Animated, StyleSheet, Image, Text } from 'react-native';
+import {Dimensions, Text, View} from "react-native";
+import React from "react";
+import Carousel from "react-native-reanimated-carousel";
+import {MotiView} from "moti";
+import {Skeleton} from "moti/skeleton";
 
-const Shimmer = ({ style }) => {
-    const translateX = new Animated.Value(-100); // Start position for animation
+const width = Dimensions.get('window').width;
 
-    React.useEffect(() => {
-        const startAnimation = () => {
-            translateX.setValue(-100); // Reset position
-            Animated.timing(translateX, {
-                toValue: 100, // End position
-                duration: 1500, // Animation duration
-                useNativeDriver: true, // Use native driver for performance
-            }).start(() => startAnimation()); // Repeat animation
-        };
+export const CarouselSkeleton = () => {
 
-        startAnimation(); // Start the animation
 
-        return () => {
-
-        };
-    }, [translateX]);
+    const colorMode = 'light';
 
     return (
-        <Animated.View
-            style={[
-                style,
-                {
-                    transform: [{ translateX }], // Apply animated translation
-                },
-            ]}
+
+        <Carousel
+            loop
+
+            mode={"parallax"}
+            width={width}
+            autoPlay={false}
+            overscrollEnabled={true}
+            pagingEnabled={true}
+            data={Array.from({ length: 3 })}
+            snapEnabled
+            renderItem={({item, index}) => (
+
+                <View style={{
+
+                    borderRadius: 20,
+                    flex:1,
+
+                    marginHorizontal: 6
+
+                }}>
+
+                    <MotiView
+                        transition={{
+                            type: 'timing',
+                        }}
+                        style={{
+                            padding: 20,
+                            flex:1,
+                            borderRadius: 10,
+                            gap: 5,
+
+                            elevation: 3
+                        }}
+                        animate={{backgroundColor: '#ffffff'}}
+                    >
+                        <MotiView style={{paddingBottom:10,flexDirection: "row",gap:20,alignItems:"center"}}>
+
+                            <Skeleton height={90} colorMode={colorMode} width={90}/>
+                            <MotiView style={{flexDirection:"column",gap:3,flex:1}}>
+
+                                <Skeleton height={15}  colorMode={colorMode} width={'100%'}/>
+
+                                <Skeleton height={15} colorMode={colorMode } width={'85%'}/>
+
+                                <Skeleton height={15} colorMode={colorMode} width={'80%'}/>
+                            </MotiView>
+                        </MotiView>
+                     <MotiView  style={{flexDirection:"column",gap:3,flex:1}}>
+
+                         <Skeleton height={15} colorMode={colorMode} width={'100%'}/>
+                         <Skeleton height={15} colorMode={colorMode} width={'85%'}/>
+                         <Skeleton height={15} colorMode={colorMode} width={'70%'}/>
+                         <Skeleton height={15} colorMode={colorMode} width={'70%'}/>
+                     </MotiView>
+                    </MotiView>
+                </View>
+
+
+            )}
         />
-    );
-};
+    )
 
-export  const SkeletonLoader = () => {
-    return (
-        <View style={styles.skeletonContainer}>
-            <Shimmer style={styles.skeletonIcon} />
-            <View style={styles.skeletonTextContainer}>
-                <Shimmer style={styles.skeletonLabel} />
-                <Shimmer style={styles.skeletonName} />
-            </View>
-        </View>
-    );
-};
 
-const styles = StyleSheet.create({
-    skeletonContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 10,
-    },
-    skeletonIcon: {
-        width: 25,
-        height: 25,
-        backgroundColor: '#e0e0e0',
-        borderRadius: 12.5, // Make it circular
-        marginRight: 10,
-    },
-    skeletonTextContainer: {
-        flex: 1,
-        flexDirection: 'column',
-        justifyContent: 'center',
-    },
-    skeletonLabel: {
-        height: 13,
-        backgroundColor: '#e0e0e0',
-        width: '60%', // Adjust width to simulate loading
-        marginBottom: 5,
-        borderRadius: 4,
-    },
-    skeletonName: {
-        height: 13,
-        backgroundColor: '#e0e0e0',
-        width: '80%', // Adjust width to simulate loading
-        borderRadius: 4,
-    },
-});
+}

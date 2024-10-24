@@ -2,36 +2,118 @@ import React, {createContext, useContext, useEffect, useRef, useState,} from 're
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
 import {CurrentUserContext} from "./CurrentUserProvider";
-import {collection, doc, getDocs, query, updateDoc, where} from "firebase/firestore";
+import {addDoc, collection, doc, getDocs, query, serverTimestamp, updateDoc, where} from "firebase/firestore";
 import {db} from "../api/firebase-config";
 import {Linking} from "react-native";
 import {promptForEnableLocationIfNeeded} from "react-native-android-location-enabler";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import useReverseGeoCoding from "../CustomHooks/useReverseGeoCoding";
 
 export const PermissionAndTaskManagerContext = createContext({});
 const LOCATION_TASK_NAME = 'background-location-task';
+import {getUserDocRefById} from "../CustomHooks/CustomFunctions/ReusableFunctions";
 
 function PermissionAndTaskManagerProvider({children}) {
     const locationSubscription = useRef(null);
     const {CurrentUser} = useContext(CurrentUserContext)
     const defaultLocationref = useRef(null);
-
     const [LocationSettings, setLocationSettings] = useState(null)
     const [refreshSettings, setrefreshSettings] = useState(false)
+
+    const {Address, setCoordinates} = useReverseGeoCoding()
+
+    const [placeName, setplaceName] = useState()
+
+    useEffect(() => {
+        if (!Address) {
+            return
+        }
+        const COORDINATE_CURRENT_POSITION = {
+            latitude: Address?.data?.features[0]?.properties?.coordinates?.latitude,
+            longitude: Address?.data?.features[0]?.properties?.coordinates?.longitude,
+        }
+        const CURRENT_FULLADDRESS =
+            Address?.data?.features[0]?.properties?.context?.locality?.name + ", " +
+            Address?.data?.features[0]?.properties?.context?.place?.name + ", "
+            + Address?.data?.features[0]?.properties?.context?.region?.name
+
+        CheckIfDriverEnteredNewPlace(Address?.data?.features[0]?.properties?.context?.locality?.name, COORDINATE_CURRENT_POSITION, CURRENT_FULLADDRESS)
+        }, [Address, placeName]);
+    const CheckIfDriverEnteredNewPlace = (CurrentAddress, COORDINATE_CURRENT_POSITION, CURRENT_FULLADDRESS) => {
+        if (CurrentUser.role !== "driver") {
+            return
+        }
+
+        AsyncStorage.getItem("RECENT_ADDRESS").then(async RECENT_ADDRESS => {
+            const CURRENT_ADDRESS = CurrentAddress
+
+            if (!RECENT_ADDRESS) {
+                await AsyncStorage.setItem("RECENT_ADDRESS", CURRENT_ADDRESS)
+                return
+            }
+            if (CURRENT_ADDRESS === RECENT_ADDRESS) {
+                return
+            }
+            if (CURRENT_ADDRESS !== RECENT_ADDRESS) {
+                console.log("entered new location")
+                console.log(RECENT_ADDRESS, "---", CURRENT_ADDRESS)
+                const DriverDocRef = await getUserDocRefById(CurrentUser?.id, "drivers");
+                const travelHistoryRef = collection(db, 'drivers', DriverDocRef.id, 'travelHistory');
+                const TravelHistory = {
+                    LocalityName: CURRENT_ADDRESS,
+                    Date: serverTimestamp(),
+                    coordinates: COORDINATE_CURRENT_POSITION,
+                    address: CURRENT_FULLADDRESS
+                };
+                try {
+
+                    await addDoc(travelHistoryRef, TravelHistory);
+                    console.log('Travel history added successfully!');
+                    await AsyncStorage.setItem("RECENT_ADDRESS", CURRENT_ADDRESS)
+                } catch (error) {
+                    console.error('Error updating driver document: ', error);
+                }
+
+
+            }
+
+        }).catch(err => {
+                console.log(err)
+            }
+        )
+    };
+
+
     const updateUserLocation = async (locations) => {
         if (CurrentUser && locations) {
             const {id, role} = CurrentUser;
 
-            const updateData = {
+
+            await setCoordinates({
+                latitude: locations[0]?.coords?.latitude,
+                longitude: locations[0]?.coords?.longitude,
+
+            })
+
+            //
+            // console.log(await RecentAddress ,"cureent address")
+
+            const PassengerData = {
+                latitude: locations[0]?.coords?.latitude,
+                longitude: locations[0]?.coords?.longitude,
+
+            };
+            const DriverData = {
                 latitude: locations[0]?.coords?.latitude,
                 longitude: locations[0]?.coords?.longitude,
             };
 
+
             if (role === "passenger") {
                 const PassengerDocRef = await getUserDocRefById(id, "users");
                 try {
-                    await updateDoc(PassengerDocRef, updateData);
-                    console.log("foreground Passenger document updated with ID: ", id);
+                    await updateDoc(PassengerDocRef, PassengerData);
+                    console.log("Passenger document updated with ID: ", id);
                 } catch (e) {
                     console.error("Error updating passenger document: ", e);
                 }
@@ -41,11 +123,13 @@ function PermissionAndTaskManagerProvider({children}) {
                 const DriverDocRef = await getUserDocRefById(id, "drivers");
                 try {
                     const driverUpdateData = {
-                        ...updateData,
+                        ...DriverData,
                         speed: locations[0]?.coords?.speed,
                         heading: locations[0]?.coords?.heading,
+                        LastUpdated: serverTimestamp(),
                     };
                     await updateDoc(DriverDocRef, driverUpdateData);
+                    // CheckIfDriverEnteredNewPlace()
                     console.log("Driver document updated with ID: ", id);
                 } catch (e) {
                     console.error("Error updating driver document: ", e);
@@ -53,8 +137,6 @@ function PermissionAndTaskManagerProvider({children}) {
             }
         }
     };
-
-
     useEffect(() => {
         TaskManager.defineTask(LOCATION_TASK_NAME, async ({data, error}) => {
             if (error) {
@@ -66,9 +148,11 @@ function PermissionAndTaskManagerProvider({children}) {
                 console.log('Background location data:', locations[0].coords);
                 await updateUserLocation(locations)
 
+
             }
         });
     }, [])
+
 
     async function BackgroundTasking() {
 
@@ -76,7 +160,7 @@ function PermissionAndTaskManagerProvider({children}) {
             accuracy: Location.Accuracy.BestForNavigation,
             showsBackgroundLocationIndicator: true,
             activityType: Location.ActivityType.AutomotiveNavigation,
-            pausesUpdatesAutomatically: true,
+            pausesUpdatesAutomatically: false,
             timeInterval: 3000,
             distanceInterval: 1.5,
             mayShowUserSettingsDialog: true,
@@ -96,7 +180,9 @@ function PermissionAndTaskManagerProvider({children}) {
                 distanceInterval: 1.5,
             },
             (newLocation) => {
+                console.log(newLocation)
                 updateUserLocation([newLocation])
+
             }
         )
     }
@@ -129,8 +215,8 @@ function PermissionAndTaskManagerProvider({children}) {
                 return;
             }
 
-
             AsyncStorage.getItem("isBackgroundLocationEnabled").then(async data => {
+
                 if (JSON.parse(data)) {
                     console.log("foreground is not enabled")
                     await stopWatchingLocation
@@ -174,26 +260,18 @@ function PermissionAndTaskManagerProvider({children}) {
         }
     };
 
-    async function getUserDocRefById(id, tableName) {
-        const docRef = collection(db, tableName);
-        const querySnapshot = await getDocs(query(docRef, where("id", "==", id)));
-        if (!querySnapshot.empty) {
-            const docId = querySnapshot.docs[0].id;
-            return doc(db, tableName, docId);
-        } else {
-            throw new Error("User not found");
-        }
-    }
+
 
 
     return (
         <PermissionAndTaskManagerContext.Provider
             value={{
                 stopBackgroundLocationTask,
+                stopWatchingLocation,
                 LocationSettings,
                 setLocationSettings,
                 refreshSettings,
-                setrefreshSettings
+                setrefreshSettings,
             }}>
             {children}
         </PermissionAndTaskManagerContext.Provider>

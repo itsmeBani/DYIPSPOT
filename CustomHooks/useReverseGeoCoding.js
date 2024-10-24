@@ -1,15 +1,23 @@
 import React, {useEffect, useState} from 'react';
 import axios from "axios";
 
-function useReverseGeoCoding(longitude, latitude) {
+function useReverseGeoCoding() {
+
+    const [Coordinates,setCoordinates]=useState({
+        latitude:null,
+        longitude:null
+
+    })
     const [Address, setAddress] = useState(null)
 
+
+
     async function Reverse() {
-        if (!longitude && !latitude) {
+        if (!Coordinates.longitude && !Coordinates.latitude) {
             return
         }
         try {
-            const response = await axios.get(`https://api.mapbox.com/search/geocode/v6/reverse?longitude=${longitude}&latitude=${latitude}&access_token=pk.eyJ1IjoiamlvdmFuaTEyMyIsImEiOiJjbHl6bWE1Ymkxb2o5MmtzYngxaGJuMWljIn0.olBgfruAbty0QZdtvASqoQ`).catch((err) => console.log(err))
+            const response = await axios.get(`https://api.mapbox.com/search/geocode/v6/reverse?longitude=${Coordinates.longitude}&latitude=${Coordinates.latitude}&access_token=pk.eyJ1IjoiamlvdmFuaTEyMyIsImEiOiJjbHl6bWE1Ymkxb2o5MmtzYngxaGJuMWljIn0.olBgfruAbty0QZdtvASqoQ`).catch((err) => console.log(err))
             setAddress(response)
         } catch (e) {
             console.log(e)
@@ -17,14 +25,18 @@ function useReverseGeoCoding(longitude, latitude) {
     }
 
 
+
+
+
+
     useEffect(() => {
 
             Reverse().then()
 
-    }, [longitude, latitude])
+    }, [Coordinates])
 
 
-    return {Address, setAddress}
+    return {Address, setCoordinates}
 }
 
 export default useReverseGeoCoding;

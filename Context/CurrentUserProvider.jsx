@@ -34,21 +34,19 @@ function CurrentUserProvider({children}) {
     }, [refresh]);
 
 
-    const OpenBottomSheet = (lon,lat,heading) => {
+    const OpenBottomSheet = () => {
 
 
 
         BottomSheetRef.current.snapToIndex(0)
-        camera.current?.setCamera({
-                centerCoordinate: [lon, lat],
-                pitch: 60,
-            heading:heading,
-                zoomLevel: 16,
-                animationMode: "flyTo"
 
-            }
-        )
+
+
     }
+
+
+
+
     return (
         <CurrentUserContext.Provider value={
             {
@@ -57,7 +55,6 @@ function CurrentUserProvider({children}) {
                 BottomSheetRef,
                 OpenBottomSheet,
                 setRefresh,
-                camera,
                 token, settoken, refresh, CurrentUser,setCurrentUser,
             }}>
             {children}

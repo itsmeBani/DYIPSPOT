@@ -2,20 +2,57 @@ import React, {useContext, useEffect, useState} from 'react';
 import {StyleSheet, Text, Button, View} from "react-native";
 import Animated, {useSharedValue, useAnimatedStyle, withTiming} from 'react-native-reanimated';
 import {JeepStatusContext} from "../Context/JeepStatus";
-import {IconStatusBox} from "./UserBottomSheet";
+
 import km from "../assets/tachometer-fastest.png"
 import CurrentlocImage from "../assets/currentloc.png"
 import useReverseGeoCoding from "../CustomHooks/useReverseGeoCoding";
-import {SkeletonLoader} from "./Loaders";
+
 import Octicons from "@expo/vector-icons/Octicons";
 import {LinearGradient} from "expo-linear-gradient";
+import {IconStatusBox} from "./IconStatusBox";
 
-function PopUpModal({data, EstimatedArrivalTime, Distance}) {
-    const {translateY, closeAnimatedModal, openModal, animatedStyle} = useContext(JeepStatusContext)
-    const ConvertedEstimatedArrivalTime = Math.floor(EstimatedArrivalTime / 60);
-    const ConvertedDistance = Math.floor(Distance / 1000);
-    const currentLocation = data?.currentLocation || [0, 0];
-    const {Address} = useReverseGeoCoding(currentLocation[0], currentLocation[1]);
+function PopUpModal() {
+
+
+    const {JeepStatusModal, animatedStyle} = useContext(JeepStatusContext)
+    const ConvertedEstimatedArrivalTime = Math.floor(JeepStatusModal?.distance?.routes[0]?.duration / 60) || 0;
+    const ConvertedDistance = Math.floor(JeepStatusModal?.distance?.routes[0]?.distance / 1000) || 0;
+    const currentLocation = JeepStatusModal?.currentLocation || [0, 0];
+    const {Address,setCoordinates} = useReverseGeoCoding();
+
+
+    const ConvertedLatestDate = new Date((JeepStatusModal?.LastUpdated?.seconds * 1000 + Math.floor(JeepStatusModal?.LastUpdated?.nanoseconds / 1000000)))
+
+
+    const MonthDay = ConvertedLatestDate.toLocaleString('en-US', {month: 'short', day: 'numeric'}); // Example: "Oct 25"
+
+    const hours = ConvertedLatestDate.getHours();
+    const minutes = ConvertedLatestDate.getMinutes();
+    const day=ConvertedLatestDate.getDate()
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const formattedHours = hours % 12 || 12;
+    const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
+    useEffect(()=>{
+        setCoordinates({ longitude: currentLocation[1], latitude: currentLocation[0] });
+    },[JeepStatusModal])
+    const today = new Date();
+    const TodayArray = [today.getMonth(), today.getDate(), today.getFullYear()]
+    const DriverLatUpdated = [ConvertedLatestDate.getMonth(), ConvertedLatestDate.getDate(), ConvertedLatestDate.getFullYear()]
+    const PresentDateFormat=formattedHours + ":" + formattedMinutes + " " + ampm
+    const PastDateFormat= MonthDay  +",  " +  formattedHours + " "+ ":" + formattedMinutes + " " + ampm
+
+    let checkifPresent = {
+        today: 0,
+        past: 0
+    }
+    for (let i = 0; i <= DriverLatUpdated.length -1; i++) {
+        if (DriverLatUpdated[i]>TodayArray[i]) {
+            checkifPresent.today +=1
+        } else if (TodayArray[i] > DriverLatUpdated[i]) {
+            checkifPresent.past+=1
+        }
+    }
+
     return (
 
         <>
@@ -34,11 +71,11 @@ function PopUpModal({data, EstimatedArrivalTime, Distance}) {
                         <View style={ModalStyle.box}>
 
                             <IconStatusBox
-                                txthighlight={data?.destination && !Object.keys(data?.destination).length <= 0 && ConvertedEstimatedArrivalTime ? ConvertedEstimatedArrivalTime : 0}
+                                txthighlight={JeepStatusModal?.destination && !Object.keys(JeepStatusModal?.destination).length <= 0 && ConvertedEstimatedArrivalTime ? ConvertedEstimatedArrivalTime : 0}
 
                                 customStyle={{
                                     label: {color: "white"},
-                                    fontFamily: "PlusJakartaSans-Bold",
+                                    fontFamily: "PlusJakartaSans-ExtraBold",
                                     highlight: {fontSize: 25, lineHeight: 30, color: "white"},
                                     margintxt: {marginLeft: 10},
                                     color: "white"
@@ -51,12 +88,12 @@ function PopUpModal({data, EstimatedArrivalTime, Distance}) {
                             <IconStatusBox
                                 customStyle={{
                                     label: {color: "white"},
-                                    fontFamily: "PlusJakartaSans-Bold",
+                                    fontFamily: "PlusJakartaSans-ExtraBold",
                                     highlight: {fontSize: 25, lineHeight: 30, color: "white"},
                                     margintxt: {marginLeft: 10},
                                     color: "white"
                                 }}
-                                txthighlight={parseInt(data?.speed)}
+                                txthighlight={parseInt(JeepStatusModal?.speed)}
                                 label={"Speed"}
                                 txt={"  m/s"}/>
 
@@ -67,12 +104,12 @@ function PopUpModal({data, EstimatedArrivalTime, Distance}) {
                             <IconStatusBox
                                 customStyle={{
                                     label: {color: "white"},
-                                    fontFamily: "PlusJakartaSans-Bold",
+                                    fontFamily: "PlusJakartaSans-ExtraBold",
                                     highlight: {fontSize: 25, lineHeight: 30, color: "white"},
                                     margintxt: {marginLeft: 10},
                                     color: "white"
                                 }}
-                                txthighlight={data?.destination && !Object.keys(data?.destination).length <= 0 ? ConvertedDistance : 0}
+                                txthighlight={JeepStatusModal?.destination && !Object.keys(JeepStatusModal?.destination).length <= 0 && ConvertedDistance ? ConvertedDistance : 0}
                                 label={"Distance"} txt={"  km"}/>
 
 
@@ -81,7 +118,7 @@ function PopUpModal({data, EstimatedArrivalTime, Distance}) {
 
                     </View>
 
-                    {data?.destination && Object.keys(data?.destination).length <= 0 &&
+                    {JeepStatusModal?.destination && Object.keys(JeepStatusModal?.destination).length <= 0 &&
                         <View style={ModalStyle.box}>
                             <View style={ModalStyle.noteCon}>
                                 <Octicons name="info" size={17} color="#3083FF"/>
@@ -91,24 +128,41 @@ function PopUpModal({data, EstimatedArrivalTime, Distance}) {
                         </View>
                     }
 
-                    <IconStatusBox
-                        customStyle={{
-                            label: {color: "white"},
-                            margintxt: {color: '#ff'},
-                            highlight: {fontSize: 18, lineHeight: 15, color: "white"},
-                            fontFamily: "PlusJakartaSans-Medium",
-                            fontSize: 12,
-                            color: "white"
-                        }}
-                        icon={CurrentlocImage} label={"Current Location"}
-                        txt={Address?.data?.features[0]?.properties?.context?.locality?.name + ", " +
-                            "" + Address?.data?.features[0]?.properties?.context?.place?.name + ", " +
-                            "" + Address?.data?.features[0]?.properties?.context?.region?.name}/>
+                    <View style={{display: "flex", flexDirection: "row", gap: 10, justifyContent: "space-between"}}>
+
+                        <IconStatusBox
+                            customStyle={{
+                                label: {color: "white", fontSize: 11,},
+                                margintxt: {color: '#ff'},
+                                highlight: {fontSize: 12, lineHeight: 15, color: "white"},
+                                fontFamily: "PlusJakartaSans-Medium",
+                                fontSize: 11,
+                                color: "white"
+                            }}
+                            icon={CurrentlocImage} label={"Current Location"}
+                            txt={Address?.data?.features[0]?.properties?.context?.locality?.name + ", " +
+                                "" + Address?.data?.features[0]?.properties?.context?.place?.name + ", " +
+                                "" + Address?.data?.features[0]?.properties?.context?.region?.name}/>
+
+                        <IconStatusBox
+                            customStyle={{
+                                label: {color: "white", fontSize: 11,},
+                                margintxt: {color: '#ff'},
+                                highlight: {fontSize: 12, lineHeight: 15, color: "white"},
+                                fontFamily: "PlusJakartaSans-Medium",
+                                fontSize: 11,
+                                color: "white"
+                            }}
+                            label={"Last Updated"}
+                            txt={checkifPresent.today > checkifPresent.past ?
+                                PresentDateFormat
+                                : checkifPresent.today < checkifPresent.past ?
+                                    PastDateFormat
+                                    : PresentDateFormat }/>
+                    </View>
+
                 </LinearGradient>
-                <Text>
 
-
-                </Text>
             </Animated.View>
         </>
     );
@@ -208,3 +262,4 @@ const ModalStyle = StyleSheet.create({
         fontSize: 11,
     }
 });
+

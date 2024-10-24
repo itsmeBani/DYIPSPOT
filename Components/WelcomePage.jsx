@@ -41,7 +41,6 @@ function WelcomePage(props) {
     }, [response])
 
     const handleSignInWithGoogle = async () => {
-
         try {
 
             if (response?.type === "success") {
@@ -111,7 +110,8 @@ function WelcomePage(props) {
                             last: user?.given_name,
                             role: "passenger",
                             latitude: null,
-                            longitude: null
+                            longitude: null,
+                           status: null,
                         });
                         console.log("Passenger document written with ID: ");
                         user.role = "passenger";
@@ -181,12 +181,7 @@ function WelcomePage(props) {
                         {isLoading ? <ActivityIndicator size="small" color="#fff"/> :
                             <Text style={styles.GooglebuttonText}>Let's Get Started</Text>}
                     </TouchableOpacity>
-                    <View  style={styles.areyoudrivercon}>
-                        <Text style={styles.areyoudriver}>Are you a driver?</Text>
-                        <TouchableOpacity activeOpacity={1 }  >
-                        <Text style={styles.areyoudriverhighlight}>Apply now</Text>
-                        </TouchableOpacity>
-                    </View>
+
                 </View>
 
 

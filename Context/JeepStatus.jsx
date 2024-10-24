@@ -1,4 +1,4 @@
-import React, {createContext, useContext, useState} from "react";
+import React, {createContext, useContext, useEffect, useRef, useState} from "react";
 import {View} from "react-native";
 import {useAnimatedStyle, useSharedValue, withTiming} from "react-native-reanimated";
 
@@ -8,13 +8,14 @@ function JeepStatusProvider({children}) {
     const [jeepid, setJeepid] = useState(null);
     const [JeepStatus, setJeepStatus] = useState(null);
     const [JeepStatusModal, setJeepStatusModal] = useState({});
-
+    const [FallowCurrentUser,setFallowCurrentUser]=useState(false)
     const [isPassenger, setIsPassenger] = useState(false)
     const [isJeeps, setIsJeeps] = useState(true)
     const [line, setline] = useState()
-
+    const [isClosed, setIsClosed] = useState(false)
     const [hideRouteline, sethideRouteline] = useState(false)
     const translateY = useSharedValue(-300);
+    const camera = useRef(null)
     const animatedStyle = useAnimatedStyle(() => {
         return {
             transform: [{translateY: translateY.value}],
@@ -24,21 +25,39 @@ function JeepStatusProvider({children}) {
         translateY.value = withTiming(0, {duration: 600});
     };
     const closeAnimatedModal =async () => {
+        translateY.value = withTiming(-300, {duration: 200});
+        setJeepid(null)
 
-        translateY.value = withTiming(-300, {duration: 300});
     };
+
+ const FallowDriverLocation= (lon,lat,heading)=>{
+
+
+     camera.current?.setCamera({
+             centerCoordinate: [lon, lat],
+             pitch: 60,
+             heading:heading,
+             zoomLevel: 16,
+             animationMode: "flyTo"
+
+         }
+     )
+
+ }
 
 
 
     return (
         <JeepStatusContext.Provider value={{
-            translateY, closeAnimatedModal, openModal, animatedStyle,
-            JeepStatus, setJeepStatus, jeepid, setJeepid, JeepStatusModal, setJeepStatusModal,
+            translateY, closeAnimatedModal, animatedStyle,
+            JeepStatus, setJeepStatus, jeepid,     openModal, setJeepid, JeepStatusModal, setJeepStatusModal,
             isPassenger, setIsPassenger,
             isJeeps, setIsJeeps,
-            line, setline,
-            hideRouteline, sethideRouteline
+            line, setline,camera,
+            isClosed, setIsClosed,
+            hideRouteline, sethideRouteline,FallowDriverLocation,FallowCurrentUser,setFallowCurrentUser
         }}>
+
             {children}
         </JeepStatusContext.Provider>
     );
