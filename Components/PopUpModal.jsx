@@ -10,48 +10,69 @@ import useReverseGeoCoding from "../CustomHooks/useReverseGeoCoding";
 import Octicons from "@expo/vector-icons/Octicons";
 import {LinearGradient} from "expo-linear-gradient";
 import {IconStatusBox} from "./IconStatusBox";
+import axios from "axios";
+import {getUserDocRefById} from "../CustomHooks/CustomFunctions/ReusableFunctions";
+import {CurrentUserContext} from "../Context/CurrentUserProvider";
 
 function PopUpModal() {
 
+    const {CurrentUser} = useContext(CurrentUserContext)
+    const {JeepStatusModal, animatedStyle, jeepid} = useContext(JeepStatusContext)
 
-    const {JeepStatusModal, animatedStyle} = useContext(JeepStatusContext)
+    const [predictAddress, setPredictAddress] = useState(null)
     const ConvertedEstimatedArrivalTime = Math.floor(JeepStatusModal?.distance?.routes[0]?.duration / 60) || 0;
     const ConvertedDistance = Math.floor(JeepStatusModal?.distance?.routes[0]?.distance / 1000) || 0;
     const currentLocation = JeepStatusModal?.currentLocation || [0, 0];
-    const {Address,setCoordinates} = useReverseGeoCoding();
-
-
+    const {Address, setCoordinates} = useReverseGeoCoding();
     const ConvertedLatestDate = new Date((JeepStatusModal?.LastUpdated?.seconds * 1000 + Math.floor(JeepStatusModal?.LastUpdated?.nanoseconds / 1000000)))
-
-
     const MonthDay = ConvertedLatestDate.toLocaleString('en-US', {month: 'short', day: 'numeric'}); // Example: "Oct 25"
-
     const hours = ConvertedLatestDate.getHours();
     const minutes = ConvertedLatestDate.getMinutes();
-    const day=ConvertedLatestDate.getDate()
     const ampm = hours >= 12 ? 'PM' : 'AM';
     const formattedHours = hours % 12 || 12;
     const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
-    useEffect(()=>{
-        setCoordinates({ longitude: currentLocation[1], latitude: currentLocation[0] });
-    },[JeepStatusModal])
     const today = new Date();
     const TodayArray = [today.getMonth(), today.getDate(), today.getFullYear()]
     const DriverLatUpdated = [ConvertedLatestDate.getMonth(), ConvertedLatestDate.getDate(), ConvertedLatestDate.getFullYear()]
-    const PresentDateFormat=formattedHours + ":" + formattedMinutes + " " + ampm
-    const PastDateFormat= MonthDay  +",  " +  formattedHours + " "+ ":" + formattedMinutes + " " + ampm
+    const PresentDateFormat = formattedHours + ":" + formattedMinutes + " " + ampm
+    const PastDateFormat = MonthDay + ",  " + formattedHours + " " + ":" + formattedMinutes + " " + ampm
 
     let checkifPresent = {
         today: 0,
         past: 0
     }
-    for (let i = 0; i <= DriverLatUpdated.length -1; i++) {
-        if (DriverLatUpdated[i]>TodayArray[i]) {
-            checkifPresent.today +=1
+    for (let i = 0; i <= DriverLatUpdated.length - 1; i++) {
+        if (DriverLatUpdated[i] > TodayArray[i]) {
+            checkifPresent.today += 1
         } else if (TodayArray[i] > DriverLatUpdated[i]) {
-            checkifPresent.past+=1
+            checkifPresent.past += 1
         }
     }
+
+    const PredictDestination = async () => {
+        try {
+            const doc = await getUserDocRefById(jeepid, "drivers");
+                const response = await axios.get(`https://predictdestination-2z3l.onrender.com/predict/${doc.id}`);
+            setPredictAddress(response.data)
+        } catch (error) {
+            if (error.response) {
+                if (error.response.status === 500) {
+                    setPredictAddress(null)
+
+
+                }
+            }
+        }
+    }
+
+    useEffect(() => {
+        if (CurrentUser.role === "passenger"){
+            PredictDestination().then()
+        }
+
+        setCoordinates({longitude: currentLocation[1], latitude: currentLocation[0]});
+    }, [JeepStatusModal])
+
 
     return (
 
@@ -121,8 +142,22 @@ function PopUpModal() {
                     {JeepStatusModal?.destination && Object.keys(JeepStatusModal?.destination).length <= 0 &&
                         <View style={ModalStyle.box}>
                             <View style={ModalStyle.noteCon}>
-                                <Octicons name="info" size={17} color="#3083FF"/>
-                                <Text style={ModalStyle.noteConTxt}>Driver has not set a destination</Text>
+                                <View style={{flexDirection: "row", gap: 5}}>
+                                    <Octicons name="info" size={17} color="#FFAA33"/>
+                                    <View style={{paddingRight:10}}>
+                                        <Text style={[ModalStyle.noteConTxt,{color: "#FFAA33"}]}>Driver has not set a destination</Text>
+                                        <View style={{flexDirection: "row", gap: 5,display:"flex"}}>
+
+                                            {/*<Text style={ModalStyle.noteConTxt}>{!Object.keys(predictAddress).length <= 0 && predictAddress[0]?.startpoint_address?.brgy }</Text>*/}
+                                            <Text style={ModalStyle.noteConTxt}>Predicted Destination:  {predictAddress ? predictAddress[1]?.endpoint_address?.brgy + ", " +
+                                                predictAddress[1]?.endpoint_address?.city + ", " +
+                                                predictAddress[1]?.endpoint_address?.province : "unknown destination "}
+
+                                                </Text>
+                                        </View>
+                                    </View>
+                                </View>
+
                             </View>
 
                         </View>
@@ -158,7 +193,7 @@ function PopUpModal() {
                                 PresentDateFormat
                                 : checkifPresent.today < checkifPresent.past ?
                                     PastDateFormat
-                                    : PresentDateFormat }/>
+                                    : PresentDateFormat}/>
                     </View>
 
                 </LinearGradient>
@@ -248,11 +283,12 @@ const ModalStyle = StyleSheet.create({
         flex: 1,
 
         width: "100%",
-        padding: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
         borderRadius: 10,
         height: "auto",
-        flexDirection: "row",
-        gap: 8,
+        flexDirection: "column",
+        gap: 1,
         backgroundColor: "white"
 
 
@@ -260,6 +296,8 @@ const ModalStyle = StyleSheet.create({
         fontFamily: "PlusJakartaSans-Medium",
         color: "#3083FF",
         fontSize: 11,
+
+
     }
 });
 

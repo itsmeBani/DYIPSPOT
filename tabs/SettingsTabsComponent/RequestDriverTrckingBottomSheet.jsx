@@ -22,6 +22,7 @@ import * as Yup from 'yup';
 import {CurrentUserContext} from "../../Context/CurrentUserProvider";
 import {addDoc, collection, serverTimestamp} from "firebase/firestore";
 import {db} from "../../api/firebase-config";
+import RadioGroup, {RadioButton} from "react-native-radio-buttons-group";
 
 function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
     const {CurrentUser} = useContext(CurrentUserContext)
@@ -35,6 +36,7 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
             .required('Phone number is required'),
         jeepName: Yup.string().required('Jeep Name is required'),
         image: Yup.mixed().required('Profile Picture is required'),
+        forhire: Yup.mixed().required('Forhire is required'),
         JeepImages: Yup.mixed().required('At least one image is required'),
     });
 
@@ -55,6 +57,33 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
     console.log("render request")
 
 
+    const [selectedId, setSelectedId] = useState("");
+    const radioButtons = [
+        {
+            id: '1', // acts as primary key, should be unique and non-empty string
+            label: 'yes',
+            value: true,
+            disabled:isLoading,
+            labelStyle: {
+                marginLeft:4,
+                color: selectedId === "1" ? "#3083FF" : "rgba(96,95,95,0.64)",
+                fontFamily: 'PlusJakartaSans-Medium',
+            },
+            color: selectedId === "1" ? "#3083FF" : "rgba(96,95,95,0.64)"
+        },
+        {
+            id: '2',
+            label: 'no',
+            value: false,
+            disabled:isLoading,
+            labelStyle: {
+                marginLeft:4,
+                color: selectedId === "2" ? "#3083FF" : "rgba(96,95,95,0.64)",
+                fontFamily: 'PlusJakartaSans-Medium',
+            },
+            color: selectedId === "2" ? "#3083FF" : "rgba(96,95,95,0.64)"
+        }
+    ];
     const GetMultipleImage = async (setFieldValue) => {
         let result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.All,
@@ -93,12 +122,12 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
 
     const SendRequest = async (values) => {
         setisLoading(true)
-        const ProfilePictureUrl =await GetImageDownloadURL(values.image)
-        const JeepImages =await GetImageDownloadURL(values.JeepImages)
+        const ProfilePictureUrl = await GetImageDownloadURL(values.image)
+        const JeepImages = await GetImageDownloadURL(values.JeepImages)
         try {
             const req = collection(db, "Request");
             const RequestData = {
-                id:CurrentUser?.id,
+                id: CurrentUser?.id,
                 profilePictureUrl: ProfilePictureUrl,
                 firstName: values?.firstName,
                 lastName: values?.lastName,
@@ -106,8 +135,9 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
                 phoneNumber: values?.phoneNumber,
                 JeepName: values?.jeepName,
                 jeepImages: JeepImages,
-                status:"pending",
-                date:serverTimestamp(),
+                forHire: values?.forhire,
+                status: "pending",
+                date: serverTimestamp(),
             }
             await addDoc(req, RequestData);
             console.log("Added Request ");
@@ -216,6 +246,33 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
         );
     };
 
+
+
+
+    const  RadioButton =({setFieldValue})=>{
+
+        return (
+            <RadioGroup
+
+                radioButtons={radioButtons}
+                onPress={(selectedId)=>{
+                setSelectedId(selectedId)
+                    const button = radioButtons.find(button => button.id === selectedId);
+                    setFieldValue('forhire', button?.value);
+            }}
+                selectedId={selectedId}
+                layout={"row"}
+                labelStyle={{
+                    marginLeft: 4,
+                    alignItems: "center",
+
+                    fontFamily: 'PlusJakartaSans-Medium',
+                }}
+
+            />
+        )
+    }
+
     return (
 
         <BottomSheet
@@ -223,25 +280,13 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
             snapPoints={['95%']}
             enableOverDrag={true}
             index={-1}
-            // onClose={() => {
-            //     setMultipleImage(null);
-            //     setImage(null)
-            //
-            // }
-            // }
-
             enablePanDownToClose={true}
-
             enableContentPanningGesture={true}
-
             handleIndicatorStyle={{backgroundColor: "#3083FF"}}
             backgroundStyle={{borderRadius: 30, elevation: 10}}>
-
             <BottomSheetScrollView scrollEnabled={true} showsVerticalScrollIndicator={false}>
                 <View style={RequestStyles.container}>
-
                     <Text style={RequestStyles.headertxt}>Request Driver Tracking</Text>
-
                     <Formik
                         initialValues={{
                             firstName: CurrentUser?.name,
@@ -250,7 +295,8 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
                             phoneNumber: '',
                             jeepName: '',
                             image: null,
-                            JeepImages: null
+                            JeepImages: null,
+                            forhire:null,
                         }}
                         validationSchema={validationSchema}
                         onSubmit={async (values) => {
@@ -268,7 +314,7 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
                               touched
                           }) => (
                             <View style={{paddingHorizontal: 25, gap: 2.5}}>
-                                <View style={{alignItems: "center"}}>
+                                <View  style={{alignItems: "center"}}>
                                     <Avatar
                                         image={values.image}
                                         setFieldValue={setFieldValue}
@@ -277,8 +323,9 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
 
                                 </View>
                                 {/* First Name Field */}
-                                <Text style={RequestStyles.label}>First name</Text>
+                                <Text   style={RequestStyles.label}>First name</Text>
                                 <TextInput
+                                    editable={!isLoading}
                                     value={values.firstName}
                                     onChangeText={handleChange('firstName')}
                                     onBlur={handleBlur('firstName')}
@@ -297,8 +344,9 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
                                 )}
 
                                 {/* Last Name Field */}
-                                <Text style={RequestStyles.label}>Last name</Text>
+                                <Text  style={RequestStyles.label}>Last name</Text>
                                 <TextInput
+                                    editable={!isLoading}
                                     value={values.lastName}
                                     onChangeText={handleChange('lastName')}
                                     onBlur={handleBlur('lastName')}
@@ -313,12 +361,13 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
                                     placeholder={"e.g., Doe"}
                                 />
                                 {touched.lastName && errors.lastName && (
-                                    <Text style={RequestStyles.error}>{errors.lastName}</Text>
+                                    <Text  style={RequestStyles.error}>{errors.lastName}</Text>
                                 )}
 
                                 {/* Address Field */}
                                 <Text style={RequestStyles.label}>Address</Text>
                                 <TextInput
+                                    editable={!isLoading}
                                     value={values.address}
                                     onChangeText={handleChange('address')}
                                     onBlur={handleBlur('address')}
@@ -339,6 +388,7 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
                                 {/* Phone Number Field */}
                                 <Text style={RequestStyles.label}>Phone number</Text>
                                 <TextInput
+                                    editable={!isLoading}
                                     maxLength={11}
                                     value={values.phoneNumber}
                                     onChangeText={handleChange('phoneNumber')}
@@ -361,6 +411,7 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
                                 {/* Jeep Name Field */}
                                 <Text style={RequestStyles.label}>Jeep name</Text>
                                 <TextInput
+                                    editable={!isLoading}
                                     value={values.jeepName}
                                     onChangeText={handleChange('jeepName')}
                                     onBlur={handleBlur('jeepName')}
@@ -384,7 +435,18 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
                                     JeepImages={values.JeepImages}
                                     setFieldValue={setFieldValue}
                                     error={touched.JeepImages && errors.JeepImages}
+
                                 />
+                                <Text style={RequestStyles.label}>is your Jeep is for hire?</Text>
+                                <View style={{flexDirection: "column", paddingBottom: 8}}>
+
+                                    <RadioButton   setFieldValue={setFieldValue} />
+
+                                    {touched.forhire && errors.forhire && (
+                                        <Text style={RequestStyles.error}>{errors.forhire}</Text>
+                                    )}
+
+                                </View>
 
                                 <View style={RequestStyles.btncon}>
                                     <TouchableOpacity disabled={isLoading} onPress={handleSubmit} activeOpacity={0.8}
@@ -442,7 +504,6 @@ const RequestStyles = StyleSheet.create({
         fontFamily: 'PlusJakartaSans-Bold',
         marginBottom: 10,
         paddingVertical: 5,
-
     }, label: {
         fontSize: 12.5,
         color: '#3083FF',
@@ -450,18 +511,14 @@ const RequestStyles = StyleSheet.create({
         fontFamily: 'PlusJakartaSans-Medium',
     }, btncon: {
         height: 45,
-
         marginBottom: 40,
         alignItems: 'center',
         justifyContent: 'center',
         display: 'flex',
         gap: 5,
-
         borderRadius: 10,
-
     }, btn: {
-
-        backgroundColor: '#3083FF', // Google Blue
+        backgroundColor: '#3083FF',
         padding: 7,
         elevation: 3,
         borderRadius: 100,

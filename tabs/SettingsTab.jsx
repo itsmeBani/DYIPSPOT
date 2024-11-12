@@ -1,4 +1,4 @@
-import {StyleSheet, Text, TouchableOpacity, View} from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View} from "react-native";
 import {CurrentUserContext} from "../Context/CurrentUserProvider";
 import React, {useContext, useEffect, useState} from "react";
 import CachedImage from "react-native-expo-cached-image";
@@ -10,6 +10,10 @@ import {collection, onSnapshot, query, where} from "firebase/firestore";
 import {db} from "../api/firebase-config";
 import PendingOrApproved from "./SettingsTabsComponent/PendingOrApproved";
 import PlaceholderCard from "./SettingsTabsComponent/PlaceholderCard";
+import {MotiView} from "moti";
+import {Easing} from "react-native-reanimated";
+import SetUserStatus from "../Components/SetUserStatus";
+import SetStatus from "../Components/SetUserStatus";
 
 export const SettingsTab = (props) => {
     const {CurrentUser, setCurrentUser} = useContext(CurrentUserContext)
@@ -77,6 +81,14 @@ export const SettingsTab = (props) => {
                 }
 
                 <LogoutButton/>
+
+
+
+             <View>
+
+
+
+             </View>
             </View>
         </GestureHandlerRootView>
     );

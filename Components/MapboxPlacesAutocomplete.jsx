@@ -2,21 +2,26 @@ import usePlacesAutocomplete from "../CustomHooks/usePlacesAutocomplete";
 import {ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View} from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Octicons from "@expo/vector-icons/Octicons";
-import React from "react";
+import React, {useRef, useState} from "react";
+import {BottomSheetScrollView} from "@gorhom/bottom-sheet";
 
-export const MapboxPlacesAutocomplete = ({
+export const MapboxPlacesAutocomplete = ({  bottomSheetScrollViewRef,
                                              id = "",
+                                             placesAutocomplete,
                                              inputStyle,
+                                             suggestedPlaceStyle,
                                              containerStyle,
                                              inputClassName = "",
                                              containerClassName = "",
                                              placeholder = "Address",
-                                             accessToken = process.env.EXPO_PUBLIC_MAPBOX_API_KEY,
+
                                              onPlaceSelect,
-                                             countryId = "ph",
+    PlaceholderTextcolor="rgba(96,95,95,0.49)",
+
                                              onClearInput,
                                          }) => {
-    const placesAutocomplete = usePlacesAutocomplete("", accessToken, countryId);
+    const textInputRef = useRef(null);
+
     if (id === "" || typeof id !== "string")
         throw new Error(
             "[MapboxPlacesAutocomplete] Property `id` is required and must be a string."
@@ -27,38 +32,50 @@ export const MapboxPlacesAutocomplete = ({
             style={[styles.container, containerStyle]}
             className={containerClassName}
         >
-            <TextInput
-                {...{...placesAutocomplete, placeholder}}
-                style={[styles.input, inputStyle]}
-                className={inputClassName}
-                placeholderTextColor={"rgba(96,95,95,0.49)"}
-            />
-            {placesAutocomplete.value && (
-                <TouchableOpacity
-                    style={styles.clearBtn}
-                    onPress={() => {
-                        placesAutocomplete.setValue("");
-                        onClearInput({id}); // tell the consumer about which input is cleared
-                    }}
-                >
-                    {/*<Image source={closeBtnUri} style={styles.clearBtnImage} />*/}
-                    <View style={styles.clearBtnImage}>
-                        <Ionicons name="close" size={18} color="#605f5f"/>
-                    </View>
-                </TouchableOpacity>
-            )}
+         <View style={{width:"100%",
+             borderRadius: 10,
+             flexDirection:"row",
+             backgroundColor:"white",
+             borderColor: '#ccc',
+             borderWidth: 1,}}>
+
+             <TextInput
+                 {...{...placesAutocomplete, placeholder}}
+                 style={[styles.input, inputStyle]}
+                 ref={textInputRef}
+                 className={inputClassName}
+                 onChange={() => placeholder === "Destination" &&  bottomSheetScrollViewRef.current?.scrollToEnd({ animated: true }) }
+                 onBlur={(e) => {
+                     textInputRef.current.setNativeProps({
+                         selection: { start: 0, end: 0 }
+                     });
+                 }}
+                 placeholderTextColor={PlaceholderTextcolor}
+             />
+             {placesAutocomplete.value && (
+                 <TouchableOpacity
+                     style={styles.clearBtn}
+                     onPress={() => {
+                         placesAutocomplete.setValue("");
+                         onClearInput({id});
+                     }}
+                 >
+                     <Ionicons name="close" size={18} color="#605f5f"/>
+                 </TouchableOpacity>
+             )}
+         </View>
             {placesAutocomplete.suggestions?.length > 0 &&
                 placesAutocomplete.value && (
-                    <PlaceSuggestionList {...{placesAutocomplete, onPlaceSelect}} />
+                    <PlaceSuggestionList {...{placesAutocomplete,suggestedPlaceStyle, onPlaceSelect}} />
                 )}
         </View>
     );
 };
 
 
-const PlaceSuggestionList = ({placesAutocomplete, onPlaceSelect}) => {
+const PlaceSuggestionList = ({placesAutocomplete,suggestedPlaceStyle, onPlaceSelect}) => {
     return (
-        <ScrollView style={styles.suggestionList}>
+        <ScrollView  style={[styles.suggestionList,suggestedPlaceStyle]}>
             {placesAutocomplete.suggestions.map((suggestion, index) => {
                 return (
                     <TouchableOpacity
@@ -74,12 +91,6 @@ const PlaceSuggestionList = ({placesAutocomplete, onPlaceSelect}) => {
                     </TouchableOpacity>
                 );
             })}
-            <View style={styles.creditBox}>
-                <Text style={styles.creditText}>
-                    powered by <Text style={{fontWeight: "bold"}}>Mapbox</Text>
-                </Text>
-                {/*<Image source={mapboxLogoUri} style={styles.creditImage} />*/}
-            </View>
         </ScrollView>
     );
 };
@@ -88,7 +99,7 @@ const styles = StyleSheet.create({
     container: {
         zIndex: 100,
         position: "relative",
-        height: 32,
+
         display: "flex",
         flexDirection: "column",
         justifyContent: "center",
@@ -97,30 +108,29 @@ const styles = StyleSheet.create({
     },
     input: {
         height: 40,
-        borderColor: '#ccc',
-        borderWidth: 1,
+flex:1,
         color: '#605f5f',
 
         display: "flex",
-        width: "100%",
-        zIndex: 0,
+
+
         fontFamily: 'PlusJakartaSans-Medium',
         borderRadius: 10,
         paddingHorizontal: 15,
         paddingRight: 25,
         backgroundColor: '#ffffff',
     },
-    clearBtn: {position: "absolute", top: 7, right: 5},
+    clearBtn: {alignItems:"center",justifyContent:"center" ,paddingRight:10},
     suggestionList: {
         position: "absolute",
+zIndex:111,
+        flex:1,
 
-        zIndex: -1,
         paddingHorizontal: 10,
         paddingVertical: 5,
-        backgroundColor: "#fff",
         borderRadius: 10,
 
-        top: 35,
+        top: 40,
         width: "100%",
 
         shadowColor: "#000",

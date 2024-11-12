@@ -10,7 +10,7 @@ function JeepStatusProvider({children}) {
     const [JeepStatusModal, setJeepStatusModal] = useState({});
     const [FallowCurrentUser,setFallowCurrentUser]=useState(false)
     const [isPassenger, setIsPassenger] = useState(false)
-    const [isJeeps, setIsJeeps] = useState(true)
+    const [isJeeps, setIsJeeps] = useState(false)
     const [line, setline] = useState()
     const [isClosed, setIsClosed] = useState(false)
     const [hideRouteline, sethideRouteline] = useState(false)

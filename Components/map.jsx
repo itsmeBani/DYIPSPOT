@@ -1,30 +1,29 @@
-import React, {useContext, useEffect, useRef, useState} from 'react';
-import {SafeAreaView, StyleSheet, StatusBar, View, Text, Image, Button, Alert, ActivityIndicator} from 'react-native';
-import MapboxGL, {LocationPuck, MarkerView, RasterLayer, RasterSource} from '@rnmapbox/maps';
+import React, {useContext, useEffect, useState} from 'react';
+import {StyleSheet} from 'react-native';
+import MapboxGL, {Camera, LocationPuck} from '@rnmapbox/maps';
 import pin from '../assets/passengericon.png';
 import pin1 from '../assets/jeepLogoPin.png';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
+import {CurrentUserContext} from "../Context/CurrentUserProvider";
+import useFetchLocation from "../CustomHooks/useFetchLocation";
+import {JeepStatusContext} from "../Context/JeepStatus";
+import useFetchDriversOnce from "../CustomHooks/useFetchDriversOnce";
+import {getUserDocRefById} from "../CustomHooks/CustomFunctions/ReusableFunctions";
+import {getDoc} from "firebase/firestore";
+
+import * as geolib from 'geolib';
 import {getRoute} from "../api/DirectionApi";
 
 MapboxGL.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_API_KEY);
-import {UserLocation, Camera} from "@rnmapbox/maps";
-
-import CategoryButton from "./CategoryButton";
-import {CurrentUserContext} from "../Context/CurrentUserProvider";
-import useFetchLocation from "../CustomHooks/useFetchLocation";
-import DirectionButton from "./DirectionButton";
-import {JeepStatusContext} from "../Context/JeepStatus";
-
-const Map = () => {
+const Map = ({Mylocation}) => {
     const [hasLocationPermission, setHasLocationPermission] = useState(false);
     const { CurrentUser} = useContext(CurrentUserContext)
-    const [isMapLoaded, setIsMapLoaded] = useState(false)
     const {FallowCurrentUser,setFallowCurrentUser}=useContext(JeepStatusContext)
+    const {JeepStatusModal, setJeepStatusModal,isPassenger, isJeeps, line,camera,jeepid,   hideRouteline, sethideRouteline, setline} = useContext(JeepStatusContext)
     const [userLocationData] = useFetchLocation("users");
-    const {JeepStatusModal, setJeepStatusModal,isPassenger, isJeeps, line,camera,   hideRouteline, sethideRouteline, setline} = useContext(JeepStatusContext)
+
     const [driverLocationData] = useFetchLocation("drivers");
-    const [Mylocation,setMylocation]=useState(false)
-    const FilterCurrentUser = userLocationData?.filter(user => user?.id !== CurrentUser?.id);
+    const FilterCurrentUser = userLocationData?.filter(user => user?.status === "waiting");
 
     const PassengerLocationMarker = {
         type: 'FeatureCollection',
@@ -43,14 +42,14 @@ const Map = () => {
             },
         })),
     };
-    const FilterCurrentDriver = driverLocationData?.filter(user => user?.id !== CurrentUser?.id);
+    const FilterCurrentDriver = driverLocationData?.filter(user =>  user?.id !== CurrentUser?.id );
 
     const DriverLocationMarker = {
         type: 'FeatureCollection',
         features: FilterCurrentDriver?.map(user => ({
             type: 'Feature',
             properties: {
-                icon: 'pin1',  // Use ImageUrl directly for the icon
+                icon: 'pin1',
                 id: user?.id,
                 name: user?.name,
                 startpoint: user?.startpoint,
@@ -58,15 +57,76 @@ const Map = () => {
             },
             geometry: {
                 type: 'Point',
-                coordinates: [user?.longitude, user?.latitude], // [longitude, latitude]
+                coordinates: [user?.longitude, user?.latitude],
             },
         })),
     };
 
 
+    const [loading, setloading] = useState(false)
+    const  [refresh,setRefresh] = useState(false)
+    const {setrefresh,refresh:refreshjeeps} = useFetchDriversOnce();
+    const [currentStatus, setCurrentStatus] =useState(null)
+
+
+    useEffect(() => {
+        const getStatus = async () => {
+            setloading(true)
+            try {
+                const DriverUserdocRef = await getUserDocRefById(CurrentUser.id, CurrentUser?.role === "passenger" ? "users" : "drivers");
+                if (DriverUserdocRef) {
+                    const userDocSnap = await getDoc(DriverUserdocRef);
+                    if (userDocSnap.exists()) {
+                       setCurrentStatus(userDocSnap.data().status);
+                        setloading(false)
+                    }
+                }
+            } catch (err) {
+                console.error('Error fetching user data:', err);
+            }
+        };
+        getStatus().then();
+    }, [userLocationData,driverLocationData]);
 
 
 
+    async function NearestPassenger() {
+        return geolib.findNearest(
+            { latitude: 120.47442912935381, longitude: 16.929432213580146 },
+            [
+                ...FilterCurrentUser?.map(user => ({
+                    latitude: user?.latitude,
+                    longitude: user?.longitude,
+                })) || []
+            ]
+        );
+    }
+    const fetchNearestPassenger = async () => {
+        try {
+            const nearestPassenger = await NearestPassenger();
+            //
+            const response =await getRoute([120.47442912935381,16.929432213580146], { latitude: nearestPassenger?.latitude, longitude: nearestPassenger?.longitude })
+               const distance= response.routes[0]?.distance
+            const converteddistance =
+                distance > 1000
+                    ? `${(distance / 1000).toFixed(2)} km`
+                    : `${distance} meters`;
+
+            console.log(converteddistance)
+
+
+
+
+
+        } catch (error) {
+            console.error('Error finding nearest passenger:', error);
+        }
+    };
+    useEffect(() => {
+
+
+        fetchNearestPassenger().then();
+    }, [userLocationData]);
     return (
         <GestureHandlerRootView style={styles.container}>
 
@@ -88,9 +148,27 @@ const Map = () => {
                 }
                 logoPosition={{top: 10, right: 10}}
             >
-                {Mylocation &&   <LocationPuck  scale={0.5}  puckBearingEnabled={true}  topImage={CurrentUser.picture}   puckBearing={"heading"} visible={true}   pulsing={{isEnabled:true,radius:60,color:"#3083FF"}}/>
-                }
 
+                { Mylocation &&
+                    <LocationPuck
+                    scale={0.}
+
+                    puckBearingEnabled={true}
+
+                    visible={true}
+                    pulsing={{
+                        isEnabled: true,
+                        radius: 70,
+                        color: currentStatus === "online" ? "#34C759"
+                            : currentStatus === "waiting" ? "#FFCC00"
+                                : "#FF3B30"
+                    }}
+                />
+
+
+
+
+                }
                 <Camera
                     heading={-50}
                     animationDuration={7000}
@@ -107,7 +185,6 @@ const Map = () => {
                     <MapboxGL.ShapeSource id="drivermarkerSource" cluster={true}
                                           shape={DriverLocationMarker}>
                         <MapboxGL.Images images={{pin1}}/>
-
                         <MapboxGL.SymbolLayer
 
                             id="drivermarkerSymbolLayer"
@@ -181,6 +258,7 @@ const Map = () => {
                             style={{
 
                                 circleColor: '#3083FF',
+                                
                                 circleRadius: ['step', ['get', 'point_count'], 20, 100, 30, 750, 40],
                                 circleStrokeWidth: 10,
                                 circleStrokeColor: 'rgba(48,131,255,0.38)',
@@ -201,7 +279,8 @@ const Map = () => {
                     </MapboxGL.ShapeSource> : null}
 
 
-                { JeepStatusModal?.distance && !hideRouteline  ?
+
+                {JeepStatusModal?.distance && !hideRouteline  ?
                     <MapboxGL.ShapeSource
 
                         id="routeSource"
@@ -211,7 +290,7 @@ const Map = () => {
                             type: 'Feature',
                             geometry: {
                                 type: 'LineString',
-                                coordinates: JeepStatusModal?.distance?.routes[0].geometry.coordinates ,
+                                coordinates: JeepStatusModal?.distance?.routes[0]?.geometry.coordinates
                             },
                         }}>
                         <MapboxGL.LineLayer
@@ -223,15 +302,8 @@ const Map = () => {
                     </MapboxGL.ShapeSource>:null
                 }
 
-
             </MapboxGL.MapView>
 
-
-            <CategoryButton  Mylocation={Mylocation} setMylocation={setMylocation}
-            />
-
-
-            {CurrentUser.role === "driver" && <DirectionButton/>}
 
 
         </GestureHandlerRootView>

@@ -21,6 +21,7 @@ import {promptForEnableLocationIfNeeded} from "react-native-android-location-ena
 import {isLocationEnabled} from 'react-native-android-location-enabler';
 import {JeepStatusContext} from "../Context/JeepStatus";
 import {CurrentUserContext} from "../Context/CurrentUserProvider";
+import WeatherIndicator from "./WeatherIndicator";
 
 
 function CategoryButton({Mylocation, setMylocation}) {
@@ -35,8 +36,7 @@ function CategoryButton({Mylocation, setMylocation}) {
     } = useContext(JeepStatusContext)
 
     function showPassenger() {
-        setFallowCurrentUser(false)
-        setMylocation(false)
+
         camera.current?.setCamera({
 
                 centerCoordinate: [120.49737362993602, 16.91644986476775],
@@ -49,13 +49,12 @@ function CategoryButton({Mylocation, setMylocation}) {
         )
         sethideRouteline(true)
         setIsPassenger(true)
-        setMylocation(false)
+
         setIsJeeps(false)
     }
 
     function showJeeps() {
-        setFallowCurrentUser(false)
-        setMylocation(false)
+
         camera.current?.setCamera({
 
                 centerCoordinate: [120.49737362993602, 16.91644986476775],
@@ -79,8 +78,14 @@ function CategoryButton({Mylocation, setMylocation}) {
 
     const [userLocationData] = useFetchLocation("users");
 
+    const FilterPassenger = userLocationData?.filter(user => user?.status === "waiting");
+
 
     const [driverLocationData] = useFetchLocation("drivers");
+    const FilterJeeps = driverLocationData?.filter(user => user?.status === "waiting"  ||  user?.status === "online");
+
+
+
     const [islocationEnabled, setisLocationEnabled] = useState(false)
     const CategoryButtonTemplate = ({label, children, functionName}) => {
         return (
@@ -106,7 +111,8 @@ function CategoryButton({Mylocation, setMylocation}) {
                 const response = await CheckifUserEnabledGps()
                 if (response) {
                     setMylocation(!Mylocation)
-                 setFallowCurrentUser(true)
+
+                 setFallowCurrentUser(!Mylocation)
 
                 }
 
@@ -154,8 +160,10 @@ function CategoryButton({Mylocation, setMylocation}) {
                     <View style={[CategoryButtonStyle.countBox, {backgroundColor: isPassenger ? "white" : "#3083FF"}]}>
 
                         <Text
-                            style={[CategoryButtonStyle.count, {color: isPassenger ? "#3083FF" : "white"}]}>{userLocationData?.length ? userLocationData?.length :
-                            <ActivityIndicator size={13} color={isPassenger ? "#3083FF" : "white"}/>}</Text>
+                            style={[CategoryButtonStyle.count, {color: isPassenger ? "#3083FF" : "white"}]}>
+                            {
+                            FilterPassenger?.length ? FilterPassenger?.length :FilterPassenger?.length <= 0 ? 0 :
+                                <ActivityIndicator size={13} color={isPassenger ? "#3083FF" : "white"}/>}</Text>
                     </View>
                 </CategoryButtonTemplate>
 
@@ -166,7 +174,7 @@ function CategoryButton({Mylocation, setMylocation}) {
                     <View style={[CategoryButtonStyle.countBox, {backgroundColor: isJeeps ? "white" : "#3083FF"}]}>
 
                         <Text
-                            style={[CategoryButtonStyle.count, {color: isJeeps ? "#3083FF" : "white"}]}>{driverLocationData?.length ? driverLocationData?.length :
+                            style={[CategoryButtonStyle.count, {color: isJeeps ? "#3083FF" : "white"}]}>{FilterJeeps?.length ? FilterJeeps?.length :
                             <ActivityIndicator size={13} color={isJeeps ? "#3083FF" : "white"}/>}</Text>
                     </View>
 
@@ -194,10 +202,9 @@ function CategoryButton({Mylocation, setMylocation}) {
                 </TouchableOpacity>
 
 
-                <TouchableOpacity activeOpacity={1} style={CategoryButtonStyle.weather}>
-                    <MaterialCommunityIcons name="weather-cloudy" size={20} color="#605f5f"/>
-                    <Text style={CategoryButtonStyle.weathertxt}> 27°</Text>
-                </TouchableOpacity>
+
+    <WeatherIndicator/>
+
             </View>
 
         </View>
@@ -210,6 +217,7 @@ export default CategoryButton;
 const CategoryButtonStyle = StyleSheet.create({
     buttonContainer: {
         position: 'absolute',
+
         top: 5,
         display: 'flex',
         gap: 5,
@@ -239,6 +247,7 @@ const CategoryButtonStyle = StyleSheet.create({
     ScrollBtnContainer: {
         backgroundColor: "transparent",
         padding: 10,
+
         display: "flex",
         gap: 7
     },
@@ -266,7 +275,8 @@ const CategoryButtonStyle = StyleSheet.create({
 
     }, statusLocation: {
         paddingHorizontal: 12,
-        display: "flex",
+
+        position:"relative",
         flexDirection: "row",
         gap: 7
     }, islocation: {
@@ -280,20 +290,5 @@ const CategoryButtonStyle = StyleSheet.create({
         borderRadius: 10,
         paddingHorizontal: 9,
     }
-    , weather: {
 
-        backgroundColor: "#fff",
-        paddingVertical: 7,
-        display: "flex",
-        flexDirection: "row",
-        elevation: 3,
-        borderRadius: 10,
-        gap: 2,
-        paddingHorizontal: 9,
-        alignItems: "center",
-    }, weathertxt: {
-        fontFamily: "PlusJakartaSans-Medium",
-        fontSize: 10,
-        color: "#605f5f"
-    }
 })

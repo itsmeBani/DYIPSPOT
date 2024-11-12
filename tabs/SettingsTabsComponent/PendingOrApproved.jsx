@@ -6,7 +6,7 @@ import {addDoc, collection, deleteDoc, getDocs, query, serverTimestamp, where} f
 import {db} from "../../api/firebase-config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {PermissionAndTaskManagerContext} from "../../Context/PermissionAndTaskManagerProvider";
-
+import * as Location from 'expo-location';
 function PendingOrApproved({status = null, Applicant}) {
     const {CurrentUser, setCurrentUser} = useContext(CurrentUserContext)
     const [loading,setloading]=useState(false)
@@ -60,8 +60,6 @@ function PendingOrApproved({status = null, Applicant}) {
     const LoginAsDriver = async () => {
          setloading(true)
         try {
-            await stopBackgroundLocationTask()
-            await stopWatchingLocation()
             await AddNewDriverTracking()
             await deleteDocumentsById(db, "users", CurrentUser?.id)
             await AsyncStorage.removeItem("UserCredentials");
@@ -73,13 +71,14 @@ function PendingOrApproved({status = null, Applicant}) {
         }finally {
             setloading(false)
         }
-
     }
 
 
     const AddNewDriverTracking = async () => {
         try {
             const ref = collection(db, "drivers");
+            const loc= await Location.getLastKnownPositionAsync()
+
             const NewDriverData = {
                 id: CurrentUser?.id,
                 LastUpdated: serverTimestamp(),
@@ -89,13 +88,14 @@ function PendingOrApproved({status = null, Applicant}) {
                 address: Applicant?.address,
                 imageUrl: Applicant?.profilePictureUrl[0],
                 jeepImages: Applicant?.jeepImages,
-                latitude: null,
+                latitude: loc?.coords?.latitude,
                 jeepName:Applicant?.JeepName,
-                longitude: null,
+                longitude:  loc?.coords?.longitude,
                 name: Applicant?.firstName + " " + Applicant?.lastName,
                 passengers: "",
                 phoneNumber: Applicant?.phoneNumber,
                 speed: 0,
+                forHire:Applicant?.forHire,
                 starpoint:{},
                 status: "offline",
 
@@ -164,8 +164,12 @@ function PendingOrApproved({status = null, Applicant}) {
                         <Image source={{uri: Applicant?.profilePictureUrl[0]}} style={PendingOrApprovedStyle.avatar}/>
                     </View>
                     <View style={PendingOrApprovedStyle.status}>
-                        <Text
-                            style={PendingOrApprovedStyle.text}>{Applicant?.firstName + " " + Applicant?.lastName}</Text>
+                        <Text style={PendingOrApprovedStyle.text}>
+                            {(Applicant?.firstName + " " + Applicant?.lastName).length > 17
+                                ? (Applicant?.firstName + " " + Applicant?.lastName).slice(0, 17) + "..."
+                                : Applicant?.firstName + " " + Applicant?.lastName}
+                        </Text>
+
                         <Text style={[PendingOrApprovedStyle.text, {fontSize: 10}]}>Applying for Jeep tracking</Text>
                         <View style={[PendingOrApprovedStyle.highlight, {backgroundColor: getHighlightColor()}]}>
                             <Text style={PendingOrApprovedStyle.highlighttxt}>{getStatusText()}</Text>

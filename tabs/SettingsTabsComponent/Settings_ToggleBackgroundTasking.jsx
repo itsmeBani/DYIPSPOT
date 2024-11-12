@@ -74,7 +74,7 @@ function Settings_ToggleBackgroundTasking(props) {
             <UseSettingContainer label={"Personalization"}>
                 <View style={SettingsStyle.switchcon}>
                     <Text style={SettingsStyle.switchcontxt}>
-                        Enable background location tracking for real-time updates, even when the app is closed. For
+                        Enable background location tracking for real-time updates, even when the app is in background. For
                         drivers, this is required to ensure accurate tracking at all times.</Text>
 
                     <Switch

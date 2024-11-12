@@ -55,25 +55,15 @@ function HomeTab(props) {
         speed: driver?.speed,
         jeepName: driver?.jeepName,
         heading: driver?.heading,
+        forHire: driver?.forHire,
         estimatedArrival: driver?.estimatedarrivaltime,
         passengers: driver?.passengers,
         phoneNumber: driver?.phoneNumber,
         JeepImages: driver?.jeepImages,
     })) || []
 
-
-    const [driversId, setDriversId] = useState(null)
     const [activeIndex, setActiveIndex] = useState(0);
-const [selectedImage,setSelectedImage] = useState()
 
-
-
-    const selecImagePreview=(url)=>{
-
-    setSelectedImage(url)
-
-
-    }
     return (
 
         <View style={{flex:1}}>
@@ -101,10 +91,10 @@ const [selectedImage,setSelectedImage] = useState()
                         snapEnabled
 
                         onSnapToItem={(index) =>{
-                            setSelectedImage(null)
                             setActiveIndex(index)
 
                         }}
+
                         renderItem={({item, index}) => (
                             <View style={{
                                 borderRadius: 20,
@@ -128,7 +118,7 @@ const [selectedImage,setSelectedImage] = useState()
                                     }}
                                 >
 
-                                    {!selectedImage ||  index !== activeIndex ?
+
                                         <View>
                                             <View
                                                 style={{flexDirection:"row",gap:20}}>
@@ -136,11 +126,11 @@ const [selectedImage,setSelectedImage] = useState()
                                                 <Image source={{uri:item?.imageUrl}} style={{height: 90, width: 90 ,borderRadius:20,borderWidth:5, borderColor:"white"}}/>
 
 
-                                                <View>
+                                                <View style={{alignItems:"flex-start"}}>
 
                                                     <Text style={HomeTabStyle.name}>{item?.name}</Text>
                                                     <Text style={HomeTabStyle.txt}>Jeepney Driver</Text>
-                                                    <Text  style={HomeTabStyle.txt}>for hire</Text>
+                                                    <Text  style={[HomeTabStyle.txt]}>{item?.forHire ? "for Hire" : "not for hire"}</Text>
                                                 </View>
                                             </View>
                                             <View  style={{paddingTop:10,gap:3}}>
@@ -151,26 +141,9 @@ const [selectedImage,setSelectedImage] = useState()
                                             </View>
                                         </View>
 
-                                        : index === activeIndex &&  <Image source={{uri:selectedImage}} style={{flex:1 ,borderRadius:10,borderWidth:2, borderColor:"white"}}/>
+                                    
 
 
-
-                                    }
-                                    <View  style={{paddingTop:10,gap:3,flexDirection:"row",justifyContent:"flex-end"}}>
-                                        {item?.JeepImages  && !Object.keys(item?.JeepImages).length <= 0 &&
-                                            item?.JeepImages.map((url,index)=>{
-                                                return (
-                                                    <TouchableOpacity activeOpacity={0.8} onPress={()=>{
-                                                        selecImagePreview(url)
-
-                                                    }}  key={index}>
-                                                        <Image source={{uri:url}} style={{height: 50, width: 50 ,borderRadius:10,borderWidth:2, borderColor:"white"}}/>
-                                                    </TouchableOpacity>
-                                                )
-                                            })
-                                         }
-
-                                    </View>
 
 
 

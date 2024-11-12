@@ -26,9 +26,9 @@ const UserBottomSheet = () => {
     const [jeepData, setJeepData] = useState();
     const [loading, setLoading] = useState(true)
     const fetchDriverData = () => {
-
+        setLoading(true);
         try {
-            setLoading(true);
+
             const driverRef = collection(db, "drivers");
             const driverQuery = query(driverRef, where("id", "==", jeepid));
 
@@ -38,7 +38,7 @@ const UserBottomSheet = () => {
                     console.log("Fetching data for jeep ID: ", jeepid);
 
                   await  setJeepStatusModal({
-                        speed: driver.speed,
+                        speed: driver?.speed,
                         currentLocation: [driver?.latitude, driver?.longitude],
                         destination: driver?.endpoint,
                         LastUpdated: driver?.LastUpdated,
@@ -56,9 +56,6 @@ const UserBottomSheet = () => {
             });
         } catch (error) {
             console.error("Error fetching driver data: ", error);
-        }
-        finally {
-
         }
     };
 
@@ -80,7 +77,6 @@ const UserBottomSheet = () => {
                 ref={BottomSheetRef}
                 snapPoints={['40%', '40%', '50%']}
                 enableOverDrag={false}
-
                 index={-1}
                 enablePanDownToClose={true}
                 onClose={() => closeAnimatedModal()}
@@ -111,14 +107,14 @@ const UserBottomSheet = () => {
                                 </View>
                                 <View style={UserBottomStyle.contactbtns}>
                                     <TouchableOpacity activeOpacity={1} onPress={() => {
-                                        Linking.openURL('sms:09193758933');
+                                        Linking.openURL(`sms:${jeepData?.phoneNumber} `);
                                     }}>
                                         <View style={UserBottomStyle.callbox}>
                                             <Ionicons name="chatbubble-ellipses-sharp" size={18} color="#fff"/>
                                         </View>
                                     </TouchableOpacity>
                                     <TouchableOpacity activeOpacity={1} onPress={() => {
-                                        Linking.openURL('tel:09193758933');
+                                        Linking.openURL(`tel:${jeepData?.phoneNumber}`);
                                     }}>
                                         <View style={UserBottomStyle.callbox}>
                                             <FontAwesome6 name="phone" size={18} color="#fff"/>
@@ -139,7 +135,7 @@ const UserBottomSheet = () => {
                                         paddingHorizontal: 32,
                                         paddingBottom: 15
                                     },
-                                }} label={"No of Passengers"} txthighlight={10}
+                                }} label={"No of Passengers"} txthighlight={jeepData?.passengers || 0}
                                                txt={"/22"}/>
                             </View>
 

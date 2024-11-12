@@ -28,6 +28,7 @@ function WelcomePage(props) {
     const [isLoading, setisLoading] = useState(false)
     const [request, response, promptAsync] = Google.useAuthRequest({
         androidClientId: GOOGLE_ANDROID_CLIENT_ID,
+        webClientId:"620708014388-38nmq9c49bdo9ttboaiq863297r4r2tj.apps.googleusercontent.com",
         redirectUri: makeRedirectUri({useProxy: true})
     });
 
@@ -89,7 +90,7 @@ function WelcomePage(props) {
                     try {
                         user.role = "driver";
                         await AsyncStorage.setItem("UserCredentials", JSON.stringify(user));
-                        console.log("Driver document updated with ID: ", docId);
+                        console.log("Drive  r document updated with ID: ", docId);
                     } catch (e) {
                         console.error("Error updating driver document: ", e);
                     }

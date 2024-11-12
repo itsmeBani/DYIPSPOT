@@ -2,9 +2,9 @@ import React, {createContext, useContext, useEffect, useRef, useState,} from 're
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
 import {CurrentUserContext} from "./CurrentUserProvider";
-import {addDoc, collection, doc, getDocs, query, serverTimestamp, updateDoc, where} from "firebase/firestore";
+import {addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where} from "firebase/firestore";
 import {db} from "../api/firebase-config";
-import {Linking} from "react-native";
+import {AppState, Linking} from "react-native";
 import {promptForEnableLocationIfNeeded} from "react-native-android-location-enabler";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import useReverseGeoCoding from "../CustomHooks/useReverseGeoCoding";
@@ -19,9 +19,10 @@ function PermissionAndTaskManagerProvider({children}) {
     const defaultLocationref = useRef(null);
     const [LocationSettings, setLocationSettings] = useState(null)
     const [refreshSettings, setrefreshSettings] = useState(false)
+    const [appState, setAppState] = useState(AppState.currentState);
+    const appStateRef = useRef(appState);
 
     const {Address, setCoordinates} = useReverseGeoCoding()
-
     const [placeName, setplaceName] = useState()
 
     useEffect(() => {
@@ -39,6 +40,9 @@ function PermissionAndTaskManagerProvider({children}) {
 
         CheckIfDriverEnteredNewPlace(Address?.data?.features[0]?.properties?.context?.locality?.name, COORDINATE_CURRENT_POSITION, CURRENT_FULLADDRESS)
         }, [Address, placeName]);
+
+
+
     const CheckIfDriverEnteredNewPlace = (CurrentAddress, COORDINATE_CURRENT_POSITION, CURRENT_FULLADDRESS) => {
         if (CurrentUser.role !== "driver") {
             return
@@ -98,29 +102,43 @@ function PermissionAndTaskManagerProvider({children}) {
             //
             // console.log(await RecentAddress ,"cureent address")
 
-            const PassengerData = {
-                latitude: locations[0]?.coords?.latitude,
-                longitude: locations[0]?.coords?.longitude,
 
-            };
             const DriverData = {
                 latitude: locations[0]?.coords?.latitude,
                 longitude: locations[0]?.coords?.longitude,
             };
+            let status;
 
+
+            const ref = await getUserDocRefById(id, CurrentUser?.role === "driver" ? "drivers":"users");
+
+            const Doc = await getDoc(ref);
+            if (Doc.exists()) {
+                status=   Doc.data().status  === "waiting" ? "waiting"
+                  : appStateRef.current === 'active' ? 'online' : 'offline'
+
+                console.log(status,"status")
+
+            }
 
             if (role === "passenger") {
-                const PassengerDocRef = await getUserDocRefById(id, "users");
+
+                const PassengerData = {
+                    latitude: locations[0]?.coords?.latitude,
+                    longitude: locations[0]?.coords?.longitude,
+                    status:status
+
+                };
                 try {
-                    await updateDoc(PassengerDocRef, PassengerData);
+                    await updateDoc(ref, PassengerData);
                     console.log("Passenger document updated with ID: ", id);
+
                 } catch (e) {
                     console.error("Error updating passenger document: ", e);
                 }
             }
 
             if (role === "driver") {
-                const DriverDocRef = await getUserDocRefById(id, "drivers");
                 try {
                     const driverUpdateData = {
                         ...DriverData,
@@ -128,8 +146,8 @@ function PermissionAndTaskManagerProvider({children}) {
                         heading: locations[0]?.coords?.heading,
                         LastUpdated: serverTimestamp(),
                     };
-                    await updateDoc(DriverDocRef, driverUpdateData);
-                    // CheckIfDriverEnteredNewPlace()
+                    await updateDoc(ref, driverUpdateData);
+
                     console.log("Driver document updated with ID: ", id);
                 } catch (e) {
                     console.error("Error updating driver document: ", e);
@@ -145,14 +163,24 @@ function PermissionAndTaskManagerProvider({children}) {
             }
             if (data) {
                 const {locations} = data;
-                console.log('Background location data:', locations[0].coords);
+
+                console.log('Background location data:', locations[0]?.coords);
                 await updateUserLocation(locations)
 
 
             }
         });
     }, [])
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', nextAppState => {
+            appStateRef.current = nextAppState; // Update the ref with the new app state
 
+        });
+
+        return () => {
+            subscription.remove(); // Cleanup subscription on unmount
+        };
+    }, []);
 
     async function BackgroundTasking() {
 

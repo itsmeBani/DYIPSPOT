@@ -1,6 +1,16 @@
 import React, {useContext, useEffect, useState} from 'react';
-import BottomSheet, {BottomSheetScrollView} from "@gorhom/bottom-sheet";
-import {View, StyleSheet, Text, ImageBackground, Image, TouchableOpacity} from "react-native";
+import BottomSheet, {BottomSheetFlatList, BottomSheetScrollView} from "@gorhom/bottom-sheet";
+import {
+    View,
+    StyleSheet,
+    Text,
+    ImageBackground,
+    Image,
+    TouchableOpacity,
+    Button,
+    FlatList,
+    RefreshControl
+} from "react-native";
 import JeepImage from "../assets/jeepbox.jpg"
 import currentloc from "../assets/map-marker (4).png"
 import {CurrentUserContext} from "../Context/CurrentUserProvider";
@@ -14,16 +24,19 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import {collection, getDocs} from "firebase/firestore";
 import {db} from "../api/firebase-config";
 import useFetchDriversOnce from "../CustomHooks/useFetchDriversOnce";
+import SetStatus from "./SetUserStatus";
 
 function JeepsBottomSheet(props) {
 
     const {OpenBottomSheet} = useContext(CurrentUserContext)
-    const {LocationData:getDriverLocation}=useFetchLocation("drivers")
+
+    const {LocationData: getDriverLocation} = useFetchLocation("drivers")
 
     const {
-        JeepStatus, refresh,    hideRouteline, sethideRouteline,
-        setrefresh, setJeepStatus, jeepid, setJeepid,  isPassenger, setIsPassenger,
-        isJeeps, setIsJeeps ,       setFallowCurrentUser    } = useContext(JeepStatusContext)
+        JeepStatus, hideRouteline, sethideRouteline,
+        setJeepStatus, jeepid, setJeepid, isPassenger, setIsPassenger,
+        isJeeps, setIsJeeps, setFallowCurrentUser
+    } = useContext(JeepStatusContext)
 
 
     const setJeepStatusAndLocation = async (lon, lat, id, heading) => {
@@ -34,81 +47,96 @@ function JeepsBottomSheet(props) {
         setIsJeeps(true)
         setIsPassenger(false)
     }
+    const refreshJeeps = () => {
+        setrefresh(!refresh); // This triggers the fetch hook to reload data
+    };
 
+    const {LocationData, loading, error, setrefresh, refresh} = useFetchDriversOnce();
+    const renderItem = ({item: driver}) => (
+        <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => setJeepStatusAndLocation(driver?.longitude, driver?.latitude, driver.id, driver?.heading)}
+            key={driver?.id}
+        >
+            <View style={JeepsBottomSheetStyle.box}>
+                <Image source={{uri: driver?.jeepImages ? driver?.jeepImages[0]: driver?.imageUrl}} style={JeepsBottomSheetStyle.jeepImage}/>
+                <View style={JeepsBottomSheetStyle.Gradient}>
+                    <View style={JeepsBottomSheetStyle.JeepTxtCon}>
+                        <Text style={JeepsBottomSheetStyle.boldtext}>
+                            {driver?.jeepName?.length > 13 ? driver.jeepName.slice(0, 13) + "..." : driver?.jeepName}
+                        </Text>
+                        <Text style={JeepsBottomSheetStyle.meduimtext}>
 
-    const { LocationData, loading, error } = useFetchDriversOnce();
-
+                            {driver?.address?.length > 13 ? driver.address.slice(0, 13) + "..." : driver?.address}
+                        </Text>
+                    </View>
+                    <View style={JeepsBottomSheetStyle.icontrack}>
+                        <View
+                            style={[JeepsBottomSheetStyle.statusJeep, {
+                                backgroundColor: driver?.status === "online" ? "#f0f9f0" : driver?.status === "waiting" ? "#fff3c6" : "#ffbaba"
+                            }]}
+                        >
+                            <MaterialIcons name="check-circle-outline" size={14}
+                                           color={driver?.status === "online" ? "#34C759" : driver?.status === "waiting" ? "#FFCC00" : "#FF3B30"}/>
+                            <Text style={[JeepsBottomSheetStyle.statustxt, {
+                                color: driver?.status === "online" ? "#34C759" : driver?.status === "waiting" ? "#FFCC00" : "#FF3B30",
+                            }]}>
+                                {driver?.status === "online" ? "operate" : driver?.status === "waiting" ? "waiting" : "offline"}
+                            </Text>
+                        </View>
+                        <FontAwesome6 name="location-crosshairs" size={24} color="#3083FF"/>
+                    </View>
+                </View>
+            </View>
+        </TouchableOpacity>
+    );
 
 
     return (
         <>
+            <View style={{
+                position: 'absolute',
+                bottom: 130,
+                right: 0,
 
+                alignItems: "center",
+                gap: 10,
+            }}>
+                <SetStatus/>
+
+
+            </View>
             <BottomSheet
                 snapPoints={['22%']}
                 enableOverDrag={false}
+
+                enableContentPanningGesture={false}
                 handleIndicatorStyle={{backgroundColor: "transparent"}}
                 backgroundStyle={{borderRadius: 30, elevation: 0, backgroundColor: "transparent"}}
             >
-                <BottomSheetScrollView showsHorizontalScrollIndicator={false} horizontal={true}
-                                       contentContainerStyle={JeepsBottomSheetStyle.contentContainer}>
-
-                    <View
-                        style={JeepsBottomSheetStyle.JeeContainer}>
-
-                        {LocationData?.map((driver) => {
 
 
-                            return (
+                <FlatList
 
+                    data={LocationData}
+                    renderItem={renderItem}
+                    keyExtractor={(driver) => driver?.id}
+                    horizontal
+                    scrollToOverflowEnabled={true}
+                    disableIntervalMomentum={true}
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={JeepsBottomSheetStyle.JeeContainer}
 
-                                <TouchableOpacity activeOpacity={1}
-                                                  onPress={() => setJeepStatusAndLocation(driver?.longitude, driver?.latitude, driver.id, driver?.heading)}
-                                                  key={driver?.id}>
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={loading}
+                            onRefresh={refreshJeeps}
+                            colors={['#3083FF']} // Change this color to your preferred one
 
-                                    <View style={JeepsBottomSheetStyle.box}>
-                                        <Image source={{uri: driver?.imageUrl}}
-                                               style={JeepsBottomSheetStyle.jeepImage}/>
-                                        <View style={JeepsBottomSheetStyle.Gradient}>
+                        />
+                    }
+                />
 
-
-                                            <View style={JeepsBottomSheetStyle.JeepTxtCon}>
-
-                                                <Text style={JeepsBottomSheetStyle.boldtext}>
-                                                    {driver?.name?.length > 13 ? driver.name.slice(0, 13) + "..." : driver?.name}
-                                                </Text>
-
-
-                                                <Text style={JeepsBottomSheetStyle.meduimtext}>Alilem Ilocus Sur </Text>
-
-
-                                            </View>
-
-
-                                            <View style={JeepsBottomSheetStyle.icontrack}>
-                                                <View
-                                                    style={[JeepsBottomSheetStyle.statusJeep, {backgroundColor: driver?.status === "operate" ? "#f0f9f0" : "#ffbaba"}]}>
-                                                    <MaterialIcons name="check-circle-outline" size={14}
-                                                                   color={driver?.status === "operate" ? "#5dc63e" : "#ff5252"}/><Text
-                                                    style={[JeepsBottomSheetStyle.statustxt, {color: driver?.status === "operate" ? "#5dc63e" : "#ff5252"}]}>{driver?.status}</Text>
-                                                </View>
-                                                <FontAwesome6 name="location-crosshairs" size={24}
-                                                              color="#3083FF"/>
-                                            </View>
-
-
-                                        </View>
-                                    </View>
-                                </TouchableOpacity>
-
-                            )
-
-
-                        })
-
-
-                        }
-                    </View>
-                </BottomSheetScrollView>
             </BottomSheet>
 
 
@@ -124,18 +152,18 @@ const JeepsBottomSheetStyle = StyleSheet.create({
         position: "relative",
         alignItems: 'center',
         display: "flex",
-
+        flexDirection: "column",
         gap: 5,
         width: "auto",
     },
     JeeContainer: {
 
-        display: "flex",
-        width: "100%",
-        paddingHorizontal: 10, paddingBottom: 10,
+
+        paddingHorizontal: 10,
+        paddingBottom: 10,
         flexDirection: "row",
         height: "auto",
-        alignItems:"flex-end",
+        alignItems: "flex-end",
         gap: 10,
 
 

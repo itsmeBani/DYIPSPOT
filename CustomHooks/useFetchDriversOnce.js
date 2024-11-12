@@ -7,7 +7,7 @@ const useFetchDriversOnce = () => {
     const [LocationData, setLocationData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-
+       const [refresh,setrefresh]=useState(false)
     useEffect(() => {
         setLoading(true);
         const fetchData = async () => {
@@ -20,18 +20,19 @@ const useFetchDriversOnce = () => {
                     ...doc.data(),
                 }));
                 setLocationData(Data);
+                console.log("refresh")
+                setLoading(false);
             } catch (error) {
                 console.error("Error fetching data: ", error);
                 setError(error);
-            } finally {
-                setLoading(false);
+
             }
         };
 
         fetchData().then();
-    }, []);
+    }, [refresh]);
 
-    return { LocationData, loading, error };
+    return { LocationData, loading, error ,setrefresh,refresh};
 };
 
 export default useFetchDriversOnce;

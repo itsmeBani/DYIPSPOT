@@ -1,7 +1,20 @@
-import React, {useContext, useState} from 'react';
-import {StyleSheet, Text, View, TextInput, Button, FlatList, TouchableOpacity, Alert, ScrollView} from 'react-native';
+import React, {useContext, useEffect, useRef, useState} from 'react';
+import {
+    StyleSheet,
+    Text,
+    View,
+    TextInput,
+    Button,
+    FlatList,
+    TouchableOpacity,
+    Alert,
+    ScrollView,
+    ActivityIndicator
+} from 'react-native';
 import BottomSheet, {BottomSheetScrollView} from '@gorhom/bottom-sheet';
 import {CurrentDriverContext} from '../Context/CurrentDriverProvider';
+
+import * as Location from 'expo-location';
 
 import SimpleLineIcons from '@expo/vector-icons/SimpleLineIcons';
 import {collection, getDocs, updateDoc, query, where, doc, addDoc, serverTimestamp} from "firebase/firestore";
@@ -10,79 +23,151 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import {CurrentUserContext} from "../Context/CurrentUserProvider";
 import {MapboxPlacesAutocomplete} from "./MapboxPlacesAutocomplete";
 import {getUserDocRefById} from "../CustomHooks/CustomFunctions/ReusableFunctions";
+import useReverseGeoCoding from "../CustomHooks/useReverseGeoCoding";
+import usePlacesAutocomplete from "../CustomHooks/usePlacesAutocomplete";
+import axios from "axios";
 
 
 function DriverBottomSheet(props) {
     const [startPoint, setStartPoint] = useState(null);
-    const [destination, setDestination] = useState([]);
+    const [destination, setDestination] = useState(null);
     const {BottomSheetRef} = useContext(CurrentDriverContext);
-
+    const bottomSheetScrollViewRef = useRef(null);
     const {camera, CurrentUser} = useContext(CurrentUserContext)
+    const [isLoading, setIsLoading] = useState(false)
+    const {Address, setCoordinates} = useReverseGeoCoding()
+    const [errorMsg,setErrorMsg]=useState(null)
+   const accessToken = process.env.EXPO_PUBLIC_MAPBOX_API_KEY
+   const countryId = "ph"
+    const StartplacesAutocomplete = usePlacesAutocomplete("", accessToken, countryId);
+    const EndplacesAutocomplete = usePlacesAutocomplete("", accessToken, countryId);
+const [suggestedStartPointPlace,setSuggestedStartPointPlace]=useState()
+    const [suggestedEndPointPlace,setSuggestedEndPointPlace]=useState()
+    const  getSuggestedPlace=async ()=>{
 
-    const [isLoading,setIsLoading]=useState(false)
+        try {
+            const doc = await getUserDocRefById(CurrentUser?.id, "drivers");
+            const response = await axios.get(`https://predictdestination-2z3l.onrender.com/suggestedPlace/${doc.id}`);
+            await setSuggestedStartPointPlace(response?.data?.startPoints)
+            await setSuggestedEndPointPlace(response?.data?.endPoints)
+
+
+
+        } catch (error) {
+            console.log(error)
+        }
+    }
+
+
+    useEffect(()=>{
+
+        getSuggestedPlace().then()
+
+    },[])
+
+
+    const InitialStartPoint = async () => {
+        try {
+           await  Location.getLastKnownPositionAsync({
+                mayShowUserSettingsDialog: true,
+                accuracy: Location.Accuracy.BestForNavigation,
+            }).then(async (loc)=>{
+
+                setCoordinates({
+                    latitude: loc?.coords?.latitude,
+                    longitude: loc?.coords?.longitude
+                })
+           await     setStartPoint({
+                    startPoint: [loc?.coords?.longitude, loc?.coords?.latitude],
+                    Locality: Address?.data?.features[0]?.properties?.context?.locality?.name ,
+                    Region: Address?.data?.features[0]?.properties?.context?.region?.name,
+                    PlaceName: Address?.data.features[0].properties?.context?.place?.name ,
+                })
+            })
+
+            await console.log(Address)
+        } catch (e) {
+            console.log(e)
+        }
+    }
+
+
+
+
+
+
+
+
     const HandleSubmitRoute = async () => {
-
+        setIsLoading(true)
         const {id, role} = CurrentUser;
-
         const driverRef = await getUserDocRefById(CurrentUser?.id, "drivers")
         const DriverDocRef = await getUserDocRefById(id, "drivers");
         const travelHistoryRef = collection(db, 'drivers', DriverDocRef.id, 'Trips');
+        if (startPoint === null) {
+            await InitialStartPoint()
+        }
+        if (destination === null) {
+            setErrorMsg("Destination is Required ")
+            setIsLoading(false)
+            return false
+        }
 
-       if (startPoint === null || destination === null){
-           alert("invalid")
-           return
-       }
 
         try {
-            console.log(startPoint)
-            await updateDoc(driverRef, {
 
+            await updateDoc(driverRef, {
+                status: "online",
                 startpoint: {
-                    latitude: startPoint.startPoint[1],
-                    longitude: startPoint.startPoint[0]
+                    latitude: startPoint?.startPoint[1],
+                    longitude: startPoint?.startPoint[0]
                 },
                 endpoint: {
-                    latitude: destination.EndPoint[1],
-                    longitude: destination.EndPoint[0]
+                    latitude: destination?.EndPoint[1],
+                    longitude: destination?.EndPoint[0]
                 },
 
             })
 
-            const Trips={
+            const Trips = {
                 startpoint: {
-                    latitude: startPoint.startPoint[1],
-                    longitude: startPoint.startPoint[0]
+                    latitude: startPoint?.startPoint[1],
+                    longitude: startPoint?.startPoint[0]
                 },
                 endpoint: {
-                    latitude: destination.EndPoint[1],
-                    longitude: destination.EndPoint[0]
+                    latitude: destination?.EndPoint[1],
+                    longitude: destination?.EndPoint[0]
                 },
-                StartPointAddress:{
-                    Locality:startPoint.Locality,
-                    Region:startPoint.Region,
-                    PlaceName:  startPoint.PlaceName
+                StartPointAddress: {
+                    Locality: startPoint?.Locality,
+                    Region: startPoint?.Region,
+                    PlaceName: startPoint?.PlaceName
                 },
-               EndPointAddress:{
-                   Locality:destination.Locality,
-                   Region:destination.Region,
-                   PlaceName:  destination.PlaceName
-               },
-                date:serverTimestamp(),
-                id:CurrentUser.id
+                EndPointAddress: {
+                    Locality: destination?.Locality,
+                    Region: destination?.Region,
+                    PlaceName: destination?.PlaceName
+                },
+                date: serverTimestamp(),
+                id: CurrentUser.id
             }
 
-            try {
-                await addDoc(travelHistoryRef, Trips);
-                console.log('Travel history added successfully!');
-            } catch (error) {
-                console.error('Error updating driver document: ', error);
-            }
-
-           alert("done updating driver document: ");
+           await addDoc(travelHistoryRef, Trips);
+            setErrorMsg(null)
+            StartplacesAutocomplete.setValue("")
+            EndplacesAutocomplete.setValue("")
+            setIsLoading(false)
             setStartPoint(null)
             setDestination(null)
+
+
+
+
+
+
         } catch (e) {
-           alert(e)
+            alert(e)
+            setIsLoading(false)
             console.error("Error updating driver document: ", e);
         }
 
@@ -90,101 +175,126 @@ function DriverBottomSheet(props) {
     }
 
 
-    //temporary suggested  =====> convert this to analysis
-    const SuggestedPlace = () => {
-        return (
-            <ScrollView horizontal={true}
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={DriverBottomSheetStyle.suggestionList}>
-                <TouchableOpacity activeOpacity={1} style={DriverBottomSheetStyle.suggestionCon}>
-                    <SimpleLineIcons name="location-pin" size={15} color="#605f5f"/>
-                    <Text style={DriverBottomSheetStyle.placetxt}>Alilem, Ilocos Sur</Text>
-                </TouchableOpacity>
-                <TouchableOpacity activeOpacity={1} style={DriverBottomSheetStyle.suggestionCon}>
-                    <SimpleLineIcons name="location-pin" size={15} color="#605f5f"/>
-                    <Text style={DriverBottomSheetStyle.placetxt}>Tagudin, Ilocos Sur</Text>
-                </TouchableOpacity>
 
-                <TouchableOpacity activeOpacity={1} style={DriverBottomSheetStyle.suggestionCon}>
-                    <SimpleLineIcons name="location-pin" size={15} color="#605f5f"/>
-                    <Text style={DriverBottomSheetStyle.placetxt}>Sudipen, La Union</Text>
-                </TouchableOpacity>
-            </ScrollView>
+    const SuggestedPlace = ({place}) => {
+        return (
+    <>
+        <Text style={DriverBottomSheetStyle.h}>Suggested place:</Text>
+        <BottomSheetScrollView horizontal={true}
+                               showsHorizontalScrollIndicator={false}
+                               contentContainerStyle={DriverBottomSheetStyle.suggestionList}>
+            {place?.map((item,index)=>{
+                return (
+
+                    <TouchableOpacity activeOpacity={1} style={DriverBottomSheetStyle.suggestionCon} key={index}>
+                        <SimpleLineIcons name="location-pin" size={15} color="#605f5f"/>
+                        <Text style={DriverBottomSheetStyle.placetxt}>{item.latitude} {item.longitude} </Text>
+                    </TouchableOpacity>
+                )
+            })}
+        </BottomSheetScrollView>
+    </>
         )
     }
     return (
         <BottomSheet
-            snapPoints={['90%']}
+            snapPoints={['75%']}
             enableOverDrag={false}
             enableContentPanningGesture={false}
             index={-1}
             enableHandlePanningGesture={true}
             ref={BottomSheetRef}
             enablePanDownToClose={true}
+
             handleIndicatorStyle={{backgroundColor: '#3083FF'}}
-            backgroundStyle={{borderRadius: 30, elevation: 0, backgroundColor: '#fff'}}>
-            <ScrollView showsHorizontalScrollIndicator={false} style={DriverBottomSheetStyle.contentContainer}>
+            backgroundStyle={{borderRadius: 30, flex:1, elevation: 0, backgroundColor: '#fff'}}>
+            <BottomSheetScrollView ref={bottomSheetScrollViewRef} showsVerticalScrollIndicator={false}
+                                   style={DriverBottomSheetStyle.contentContainer}>
 
                 <Text style={DriverBottomSheetStyle.headerText}>Set Route</Text>
-                <View style={DriverBottomSheetStyle.inputContainer}>
-                    <View style={{paddingHorizontal: 20}}>
-                        <Text style={DriverBottomSheetStyle.label}>Start Point</Text>
 
-                        <MapboxPlacesAutocomplete
-                            id="origin"
-                            placeholder="My location"
-                            onPlaceSelect={(data) => {
-                                setStartPoint({
-                                    startPoint: data?.center,
-                                    Locality:data?.text,
-                                    Region: data?.context[1]?.text,
-                                    PlaceName:  data?.context[0]?.text
-                                })
-                            }}
-                            onClearInput={({id}) => {
-                            }}
-                            containerStyle={{}}
-                        />
+            <View style={{flex:1, height:"100%"}}>
+                <View style={{paddingHorizontal: 20, zIndex: 111}}>
+                    <Text style={DriverBottomSheetStyle.label}>Start Point</Text>
 
-                        <Text style={DriverBottomSheetStyle.h}>Suggested place:</Text>
+                    <MapboxPlacesAutocomplete
+                        PlaceholderTextcolor={"#3083ff"}
+                        id="origin"
+                        placesAutocomplete={StartplacesAutocomplete}
+                        suggestedPlaceStyle={{backgroundColor: "white", zIndex: 100}}
+                        bottomSheetScrollViewRef={bottomSheetScrollViewRef}
+                        placeholder="My location"
 
-                    </View>
-                    <SuggestedPlace/>
+                        onPlaceSelect={(data) => {
 
-                    <View style={{paddingHorizontal: 20}}>
-                        <Text style={DriverBottomSheetStyle.label}>Destination Point</Text>
+                            console.log(data)
+                            setStartPoint({
+                                startPoint: data?.center,
+                                Locality: data?.text,
+                                Region: data?.context[1]?.text,
+                                PlaceName: data?.context[0]?.text
+                            })
+                        }}
+                        onClearInput={({id}) => {
 
-                        <MapboxPlacesAutocomplete
-                            id="Destination"
-                            placeholder="Destination"
-                            onPlaceSelect={(data) => {
-                                setDestination({
-                                    EndPoint: data?.center,
-                                    Locality:data?.text,
-                                    Region: data?.context[1]?.text,
-                                    PlaceName:  data?.context[0]?.text
-                                })
-                            }}
-                            onClearInput={({id}) => {
-                            }}
-                            containerStyle={{}}
-                        />
+                        }}
+                        containerStyle={{}}
+                    />
 
 
-                        <Text style={DriverBottomSheetStyle.h}>Suggested place:</Text>
-
-                    </View>
-                    <SuggestedPlace/>
-                    <View style={{paddingHorizontal: 20, paddingTop: 10,}}>
-                        <TouchableOpacity activeOpacity={0.8} onPress={HandleSubmitRoute} disabled={isLoading}
-                                          style={DriverBottomSheetStyle.btn}><Text
-                            style={DriverBottomSheetStyle.btntxt}>Set Route</Text></TouchableOpacity>
-                    </View>
 
                 </View>
 
+                {suggestedStartPointPlace &&
+                    <SuggestedPlace place={suggestedStartPointPlace}/>}
 
-            </ScrollView>
+                <View style={{paddingHorizontal: 20, flex: 1, overflow: "visible"}}>
+                    <Text style={DriverBottomSheetStyle.label}>Destination Point</Text>
+
+                    <MapboxPlacesAutocomplete
+                        id="Destination"
+                        suggestedPlaceStyle={{backgroundColor: "white", zIndex: 100}}
+                        bottomSheetScrollViewRef={bottomSheetScrollViewRef}
+                        placeholder="Destination"
+                        placesAutocomplete={EndplacesAutocomplete}
+                        onPlaceSelect={(data) => {
+                            setDestination({
+                                EndPoint: data?.center,
+                                Locality: data?.text,
+                                Region: data?.context[1]?.text,
+                                PlaceName: data?.context[0]?.text
+                            })
+                        }}
+                        onClearInput={({id}) => {
+
+                        }}
+                        containerStyle={{}}
+                    />
+                    {errorMsg   &&  <Text style={{
+                        color: '#f56a6a',
+                        fontSize: 10,
+                        fontFamily: "PlusJakartaSans-Medium",
+                    }}>
+                        {errorMsg && errorMsg}
+                    </Text>
+                    }
+
+                </View>
+                {suggestedEndPointPlace &&
+                    <SuggestedPlace place={suggestedEndPointPlace}/>}
+
+                <View style={{paddingHorizontal: 20, paddingTop: 10,}}>
+                    <TouchableOpacity activeOpacity={0.8} onPress={HandleSubmitRoute} disabled={isLoading}
+                                      style={DriverBottomSheetStyle.btn}>
+                        {isLoading ? <ActivityIndicator size="small" color="#fff"/> :
+                            <Text style={DriverBottomSheetStyle.btntxt}>Set Route</Text>}
+
+
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            </BottomSheetScrollView>
 
 
         </BottomSheet>
@@ -194,10 +304,8 @@ function DriverBottomSheet(props) {
 export default DriverBottomSheet;
 
 const DriverBottomSheetStyle = StyleSheet.create({
-    contentContainer: {
-        display: 'flex',
-
-
+    contentContainer:{
+        flex:1
     },
     headerText: {
         fontSize: 16,
@@ -208,10 +316,11 @@ const DriverBottomSheetStyle = StyleSheet.create({
         paddingHorizontal: 20,
     },
     inputContainer: {
-        display: 'flex',
-        flexDirection: "column",
-        flex: 1,
 
+
+        backgroundColor: "pink",
+        flex: 1,
+        height: "100%"
 
     },
     label: {
@@ -276,7 +385,7 @@ const DriverBottomSheetStyle = StyleSheet.create({
         justifyContent: 'center',
         display: 'flex',
         gap: 1,
-
+zIndex:-1,
         borderRadius: 10,
         backgroundColor: "#3083FF",
 
@@ -296,6 +405,7 @@ const DriverBottomSheetStyle = StyleSheet.create({
         fontFamily: "PlusJakartaSans-Medium",
         color: '#605f5f',
     }, h: {
+        paddingLeft: 20,
         marginTop: 6,
         fontSize: 12,
         fontFamily: "PlusJakartaSans-Medium",
