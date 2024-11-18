@@ -37,8 +37,8 @@ function PermissionAndTaskManagerProvider({children}) {
             Address?.data?.features[0]?.properties?.context?.locality?.name + ", " +
             Address?.data?.features[0]?.properties?.context?.place?.name + ", "
             + Address?.data?.features[0]?.properties?.context?.region?.name
-
         CheckIfDriverEnteredNewPlace(Address?.data?.features[0]?.properties?.context?.locality?.name, COORDINATE_CURRENT_POSITION, CURRENT_FULLADDRESS)
+
         }, [Address, placeName]);
 
 
@@ -91,27 +91,12 @@ function PermissionAndTaskManagerProvider({children}) {
     const updateUserLocation = async (locations) => {
         if (CurrentUser && locations) {
             const {id, role} = CurrentUser;
-
-
-            await setCoordinates({
-                latitude: locations[0]?.coords?.latitude,
-                longitude: locations[0]?.coords?.longitude,
-
-            })
-
-            //
-            // console.log(await RecentAddress ,"cureent address")
-
-
             const DriverData = {
                 latitude: locations[0]?.coords?.latitude,
                 longitude: locations[0]?.coords?.longitude,
             };
             let status;
-
-
             const ref = await getUserDocRefById(id, CurrentUser?.role === "driver" ? "drivers":"users");
-
             const Doc = await getDoc(ref);
             if (Doc.exists()) {
                 status=   Doc.data().status  === "waiting" ? "waiting"
@@ -140,6 +125,11 @@ function PermissionAndTaskManagerProvider({children}) {
 
             if (role === "driver") {
                 try {
+                    await setCoordinates({
+                        latitude: locations[0]?.coords?.latitude,
+                        longitude: locations[0]?.coords?.longitude,
+
+                    })
                     const driverUpdateData = {
                         ...DriverData,
                         speed: locations[0]?.coords?.speed,
@@ -189,8 +179,8 @@ function PermissionAndTaskManagerProvider({children}) {
             showsBackgroundLocationIndicator: true,
             activityType: Location.ActivityType.AutomotiveNavigation,
             pausesUpdatesAutomatically: false,
-            timeInterval: 3000,
-            distanceInterval: 1.5,
+            timeInterval: 4000,
+            distanceInterval: 5.5,
             mayShowUserSettingsDialog: true,
             foregroundService: {
                 notificationTitle: 'Tracking location',
@@ -204,8 +194,8 @@ function PermissionAndTaskManagerProvider({children}) {
         defaultLocationref.current = await Location.watchPositionAsync(
             {
                 accuracy: Location.Accuracy.BestForNavigation,
-                timeInterval: 3000,
-                distanceInterval: 1.5,
+                timeInterval: 4000,
+                distanceInterval: 5.5,
             },
             (newLocation) => {
                 console.log(newLocation)

@@ -20,6 +20,7 @@ export default DirectionButton;
 const btnStyle = StyleSheet.create({
 
     directionBtnStyle: {
+
 alignItems:"center"
     },btnmain:{
 

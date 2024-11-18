@@ -3,15 +3,11 @@ import Jeep from "../../assets/jeep.png";
 import {LinearGradient} from "expo-linear-gradient";
 
 import React, {useRef} from 'react';
-import RequestDriverTrckingBottomSheet from "./RequestDriverTrckingBottomSheet";
+import FormDriverTrackingBottomSheet from "./FormDriverTrckingBottomSheet";
 
-function ApplyNow(props) {
+function ApplyNow({RequestBottomSheet,OpenRequestBottomSheet}) {
 
-    const RequestBottomSheet = useRef()
-    const OpenRequestBottomSheet=()=>{
-        RequestBottomSheet.current.snapToIndex(0)
 
-    }
     return (
 <>
 
@@ -33,7 +29,7 @@ function ApplyNow(props) {
         </LinearGradient>
 
     </View>
-    <RequestDriverTrckingBottomSheet RequestBottomSheet={RequestBottomSheet} />
+    <FormDriverTrackingBottomSheet RequestBottomSheet={RequestBottomSheet} DriverInformation={null}  action={"request"} title={"Request Driver Tracking"} />
 
 </>
     );

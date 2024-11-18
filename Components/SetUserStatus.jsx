@@ -98,6 +98,7 @@ function SetStatus() {
                     style={styles.statusbar}
                 >
                     <View style={[styles.indicator, {backgroundColor: color}]}/>
+
                     <Text style={[styles.statustxt, {color}]}>{label}</Text>
                 </MotiView>
             </TouchableOpacity>

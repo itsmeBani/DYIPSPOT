@@ -1,12 +1,12 @@
-import { StyleSheet, Text, TouchableOpacity, View} from "react-native";
+import {ActivityIndicator, StyleSheet, Text, TouchableOpacity, View} from "react-native";
 import {CurrentUserContext} from "../Context/CurrentUserProvider";
-import React, {useContext, useEffect, useState} from "react";
+import React, {useContext, useEffect, useRef, useState} from "react";
 import CachedImage from "react-native-expo-cached-image";
 import {GestureHandlerRootView} from "react-native-gesture-handler";
 import Settings_ToggleBackgroundTasking from "./SettingsTabsComponent/Settings_ToggleBackgroundTasking";
 import LogoutButton from "./SettingsTabsComponent/LogoutButton";
 import ApplyNow from "./SettingsTabsComponent/ApplyNow";
-import {collection, onSnapshot, query, where} from "firebase/firestore";
+import {collection, getDoc, onSnapshot, query, where} from "firebase/firestore";
 import {db} from "../api/firebase-config";
 import PendingOrApproved from "./SettingsTabsComponent/PendingOrApproved";
 import PlaceholderCard from "./SettingsTabsComponent/PlaceholderCard";
@@ -14,12 +14,48 @@ import {MotiView} from "moti";
 import {Easing} from "react-native-reanimated";
 import SetUserStatus from "../Components/SetUserStatus";
 import SetStatus from "../Components/SetUserStatus";
+import UseSettingContainer from "./SettingsTabsComponent/UseSettingContainer";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import FormDriverTrackingBottomSheet from "./SettingsTabsComponent/FormDriverTrckingBottomSheet";
+import {getUserDocRefById} from "../CustomHooks/CustomFunctions/ReusableFunctions";
 
 export const SettingsTab = (props) => {
     const {CurrentUser, setCurrentUser} = useContext(CurrentUserContext)
     const [AlreadyApply, setAlreadyApply] = useState(false)
     const [isLoading, setLoading] = useState(true)
     const [Applicant, setApplicant] = useState(null); // State to hold fetched user data
+    const RequestBottomSheet = useRef()
+    const [DriverInformation,setDriverInformation]=useState(null)
+const [loading,setloading]=useState(false)
+
+    const OpenRequestBottomSheet = () => {
+        RequestBottomSheet.current.snapToIndex(0)
+    }
+
+
+
+    const EditBottomSheet = useRef()
+    const OpenEditProfileBottomSheet = async () => {
+        setloading(true)
+        try {
+
+            const CurrentUserdocRef = await getUserDocRefById(CurrentUser.id, "drivers");
+            if (CurrentUserdocRef) {
+                const userDocSnap = await getDoc(CurrentUserdocRef);
+                if (userDocSnap.exists()) {
+                    setDriverInformation(userDocSnap.data());
+                    setloading(false)
+                    EditBottomSheet.current.snapToIndex(0)
+                }
+            }
+        } catch (err) {
+            console.error('Error fetching user data:', err);
+            setloading(false)
+        }
+
+
+    }
+
 
     useEffect(() => {
         setLoading(true)
@@ -43,12 +79,23 @@ export const SettingsTab = (props) => {
             return () => unsubscribe();
         }
     }, []);
+
+
+
+
+
+
+
+
+
+
     const renderContent = () => {
         switch (true) {
             case CurrentUser?.role === "passenger" && AlreadyApply:
-                return <PendingOrApproved Applicant={Applicant} status={Applicant?.status} />;
+                return <PendingOrApproved Applicant={Applicant} status={Applicant?.status}/>;
             case CurrentUser?.role === "passenger" && !AlreadyApply:
-                return <ApplyNow />;
+                return <ApplyNow OpenRequestBottomSheet={OpenRequestBottomSheet}
+                                 RequestBottomSheet={RequestBottomSheet}/>;
         }
     };
 
@@ -71,11 +118,27 @@ export const SettingsTab = (props) => {
                     </View>
 
                 </View>
+               <View style={{paddingHorizontal:10}}>
+
+                   {CurrentUser?.role === "driver" && <UseSettingContainer label={"Profile"}>
+
+                       <TouchableOpacity style={SettingsStyle.edit} onPress={OpenEditProfileBottomSheet}>
+
+                      <View style={{flexDirection:"row",gap:4}}>
+                          <MaterialIcons name="drive-file-rename-outline" size={24} color="#555a6a"/>
+                          <Text style={SettingsStyle.edittxt}> Personal Information</Text>
+                      </View>
+                           {loading &&  <ActivityIndicator size="small" color="#3083FF"/>}
+                       </TouchableOpacity>
+
+                   </UseSettingContainer>}
+               </View>
                 <Settings_ToggleBackgroundTasking/>
+
                 {
                     CurrentUser.role === "passenger" && (
                         <>
-                            {isLoading ? <PlaceholderCard /> : renderContent()}
+                            {isLoading ? <PlaceholderCard/> : renderContent()}
                         </>
                     )
                 }
@@ -83,13 +146,12 @@ export const SettingsTab = (props) => {
                 <LogoutButton/>
 
 
-
-             <View>
-
+                <View>
 
 
-             </View>
+                </View>
             </View>
+            {CurrentUser?.role === "driver" && <FormDriverTrackingBottomSheet RequestBottomSheet={EditBottomSheet} title={"Edit Driver Profile"} DriverInformation={DriverInformation} action={"update"}/>}
         </GestureHandlerRootView>
     );
 
@@ -105,7 +167,6 @@ const SettingsStyle = StyleSheet.create({
         backgroundColor: "white",
         height: "100%",
         padding: 10,
-        gap: 10,
 
     }, image: {
 
@@ -148,5 +209,19 @@ const SettingsStyle = StyleSheet.create({
         textTransform: "capitalize",
         fontFamily: "PlusJakartaSans-Medium",
 
-    }, permissionAndLocation: {}
+    }, permissionAndLocation: {},
+    edit:{
+        paddingTop:2,
+        gap:3,
+        justifyContent:"space-between",
+        flexDirection:"row",
+
+    },edittxt:{
+        color: "#555a6a",
+
+        fontSize: 13,
+        textTransform: "capitalize",
+        fontFamily: "PlusJakartaSans-Medium",
+
+    }
 })

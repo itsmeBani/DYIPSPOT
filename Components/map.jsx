@@ -64,8 +64,6 @@ const Map = ({Mylocation}) => {
 
 
     const [loading, setloading] = useState(false)
-    const  [refresh,setRefresh] = useState(false)
-    const {setrefresh,refresh:refreshjeeps} = useFetchDriversOnce();
     const [currentStatus, setCurrentStatus] =useState(null)
 
 
@@ -90,43 +88,7 @@ const Map = ({Mylocation}) => {
 
 
 
-    async function NearestPassenger() {
-        return geolib.findNearest(
-            { latitude: 120.47442912935381, longitude: 16.929432213580146 },
-            [
-                ...FilterCurrentUser?.map(user => ({
-                    latitude: user?.latitude,
-                    longitude: user?.longitude,
-                })) || []
-            ]
-        );
-    }
-    const fetchNearestPassenger = async () => {
-        try {
-            const nearestPassenger = await NearestPassenger();
-            //
-            const response =await getRoute([120.47442912935381,16.929432213580146], { latitude: nearestPassenger?.latitude, longitude: nearestPassenger?.longitude })
-               const distance= response.routes[0]?.distance
-            const converteddistance =
-                distance > 1000
-                    ? `${(distance / 1000).toFixed(2)} km`
-                    : `${distance} meters`;
 
-            console.log(converteddistance)
-
-
-
-
-
-        } catch (error) {
-            console.error('Error finding nearest passenger:', error);
-        }
-    };
-    useEffect(() => {
-
-
-        fetchNearestPassenger().then();
-    }, [userLocationData]);
     return (
         <GestureHandlerRootView style={styles.container}>
 
@@ -151,7 +113,6 @@ const Map = ({Mylocation}) => {
 
                 { Mylocation &&
                     <LocationPuck
-                    scale={0.}
 
                     puckBearingEnabled={true}
 
@@ -173,13 +134,17 @@ const Map = ({Mylocation}) => {
                     heading={-50}
                     animationDuration={7000}
                     ref={camera}
-                    centerCoordinate={[120.448687, 16.933407]}
-                    pitch={60}
                     zoomLevel={16}
-                    animationMode="flyTo"
                     followUserLocation={FallowCurrentUser}
+                  defaultSettings={{
+                      centerCoordinate:[120.448687, 16.933407],
+                      pitch:60,
 
-                    followZoomLevel={16.8}
+
+                      animationMode:"flyTo",
+
+                  }}
+                    followZoomLevel={18.8}
                 />
                 {driverLocationData && isJeeps ?
                     <MapboxGL.ShapeSource id="drivermarkerSource" cluster={true}

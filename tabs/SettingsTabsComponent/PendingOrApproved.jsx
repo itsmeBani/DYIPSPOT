@@ -60,6 +60,7 @@ function PendingOrApproved({status = null, Applicant}) {
     const LoginAsDriver = async () => {
          setloading(true)
         try {
+             await stopBackgroundLocationTask()
             await AddNewDriverTracking()
             await deleteDocumentsById(db, "users", CurrentUser?.id)
             await AsyncStorage.removeItem("UserCredentials");

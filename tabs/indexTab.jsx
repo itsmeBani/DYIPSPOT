@@ -16,7 +16,7 @@ import PermissionAndTaskManagerProvider, {
     PermissionAndTaskManagerContext
 } from "../Context/PermissionAndTaskManagerProvider";
 import HomeTab from "./HomeTab";
-import RequestDriverTrckingBottomSheet from "./SettingsTabsComponent/RequestDriverTrckingBottomSheet";
+import FormDriverTrckingBottomSheet from "./SettingsTabsComponent/FormDriverTrckingBottomSheet";
 import {GestureHandlerRootView} from "react-native-gesture-handler";
 
 

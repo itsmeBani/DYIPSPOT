@@ -17,8 +17,7 @@ const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_ANDROID_CLIENT_ID
 import SpeedImage from "../assets/speed.png"
 import passengers from "../assets/passenger.png"
 import arrivaltime from "../assets/arrivaltime.png"
-
-import {collection, addDoc, updateDoc, query,setDoc, where, doc, getDocs} from "firebase/firestore";
+import {collection, addDoc, updateDoc, query, setDoc, where, doc, getDocs} from "firebase/firestore";
 import {db} from "../api/firebase-config"
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {CurrentUserContext} from "../Context/CurrentUserProvider";
@@ -28,19 +27,11 @@ function WelcomePage(props) {
     const [isLoading, setisLoading] = useState(false)
     const [request, response, promptAsync] = Google.useAuthRequest({
         androidClientId: GOOGLE_ANDROID_CLIENT_ID,
-        webClientId:"620708014388-38nmq9c49bdo9ttboaiq863297r4r2tj.apps.googleusercontent.com",
         redirectUri: makeRedirectUri({useProxy: true})
     });
-
-
-
-
-
     useEffect(() => {
-
         handleSignInWithGoogle();
     }, [response])
-
     const handleSignInWithGoogle = async () => {
         try {
 
@@ -59,24 +50,10 @@ function WelcomePage(props) {
     }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     const getUserInfo = async (token) => {
         try {
             const response = await fetch(process.env.EXPO_PUBLIC_GOOGLE_AUTH, {
-                headers: { Authorization: `Bearer ${token}` }
+                headers: {Authorization: `Bearer ${token}`}
             });
             const user = await response.json();
             if (user?.id) {
@@ -87,10 +64,19 @@ function WelcomePage(props) {
 
                 if (!driverSnapshot.empty) {
                     const docId = driverSnapshot.docs[0].id;
+
+
                     try {
+
+                        const driverData = driverSnapshot.docs[0].data()
+                        driverData.role = "driver"
+                        driverData.email = user?.email
+                        driverData.picture = driverData?.imageUrl
+
+
                         user.role = "driver";
-                        await AsyncStorage.setItem("UserCredentials", JSON.stringify(user));
-                        console.log("Drive  r document updated with ID: ", docId);
+                        await AsyncStorage.setItem("UserCredentials", JSON.stringify(driverData));
+                        console.log("Driver document updated with ID: ", docId);
                     } catch (e) {
                         console.error("Error updating driver document: ", e);
                     }
@@ -98,13 +84,22 @@ function WelcomePage(props) {
                     const passengerQuery = query(userRef, where("id", "==", user?.id));
                     const passengerSnapshot = await getDocs(passengerQuery);
                     if (!passengerSnapshot.empty) {
+
+                        const passengerData = passengerSnapshot.docs[0].data()
+                        passengerData.role = "passenger"
+                        passengerData.email = user?.email
+                        passengerData.name = passengerData?.first + " " + passengerData?.last
+                        passengerData.picture = passengerData?.ImageUrl
+
+
+                        console.log(passengerData)
                         const docId = passengerSnapshot.docs[0].id;
                         console.log("Passenger document updated with ID: ", docId);
                         user.role = "passenger";
-                        await AsyncStorage.setItem("UserCredentials", JSON.stringify(user));
+                        await AsyncStorage.setItem("UserCredentials", JSON.stringify(passengerData));
 
                     } else {
-                       await addDoc(userRef, {
+                        await addDoc(userRef, {
                             id: user?.id,
                             first: user.name,
                             ImageUrl: user.picture,
@@ -112,7 +107,7 @@ function WelcomePage(props) {
                             role: "passenger",
                             latitude: null,
                             longitude: null,
-                           status: null,
+                            status: null,
                         });
                         console.log("Passenger document written with ID: ");
                         user.role = "passenger";
@@ -120,9 +115,6 @@ function WelcomePage(props) {
 
                     }
                 }
-
-
-
 
 
             }
@@ -186,7 +178,6 @@ function WelcomePage(props) {
                 </View>
 
 
-
             </View>
 
 
@@ -243,7 +234,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         display: 'flex',
-        gap:5,
+        gap: 5,
         paddingHorizontal: 15,
         borderRadius: 10,
 
@@ -333,7 +324,7 @@ const styles = StyleSheet.create({
         position: "absolute",
         bottom: 160,
         objectFit: "contain"
-    },areyoudriver:{
+    }, areyoudriver: {
         textAlign: "center",
         fontSize: 12,
         fontFamily: 'PlusJakartaSans-Medium',
@@ -341,19 +332,20 @@ const styles = StyleSheet.create({
         color: "rgb(81,81,81)"
 
 
-    },areyoudriverhighlight:{
+    }, areyoudriverhighlight: {
 
-        display:"flex",
-        justifyContent:"flex-end",
+        display: "flex",
+        justifyContent: "flex-end",
         alignItems: "flex-end",
         fontSize: 12,
         fontFamily: 'PlusJakartaSans-Medium',
         textAlign: "center",
         color: "#3083FF",
-        textDecorationLine:"underline"
-    },areyoudrivercon:{
-display:"flex",
-        flexDirection:"row",
-gap:2
+        textDecorationLine: "underline"
+    }, areyoudrivercon: {
+        display: "flex",
+        flexDirection: "row",
+        gap: 2
 
-}})
+    }
+})

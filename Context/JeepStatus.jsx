@@ -9,7 +9,7 @@ function JeepStatusProvider({children}) {
     const [JeepStatus, setJeepStatus] = useState(null);
     const [JeepStatusModal, setJeepStatusModal] = useState({});
     const [FallowCurrentUser,setFallowCurrentUser]=useState(false)
-    const [isPassenger, setIsPassenger] = useState(false)
+    const [isPassenger, setIsPassenger] = useState(true)
     const [isJeeps, setIsJeeps] = useState(false)
     const [line, setline] = useState()
     const [isClosed, setIsClosed] = useState(false)
@@ -44,6 +44,20 @@ function JeepStatusProvider({children}) {
      )
 
  }
+    const  GotoNearestPassenger=async (lon,lat)=>{
+
+
+      await  camera.current?.setCamera({
+                centerCoordinate: [lon, lat],
+                pitch: 60,
+
+                zoomLevel: 16,
+                animationMode: "flyTo"
+
+            }
+        )
+
+    }
 
 
 
@@ -54,7 +68,7 @@ function JeepStatusProvider({children}) {
             isPassenger, setIsPassenger,
             isJeeps, setIsJeeps,
             line, setline,camera,
-            isClosed, setIsClosed,
+            isClosed, setIsClosed,GotoNearestPassenger,
             hideRouteline, sethideRouteline,FallowDriverLocation,FallowCurrentUser,setFallowCurrentUser
         }}>
 

@@ -185,16 +185,16 @@ function CategoryButton({Mylocation, setMylocation}) {
             <View style={CategoryButtonStyle.statusLocation}>
 
                 <TouchableOpacity activeOpacity={1} onPress={handleEnabledPressed}
-                                  style={[CategoryButtonStyle.islocation, {backgroundColor: islocationEnabled && Mylocation ? "#3083FF" : "white"}]}>
+                                  style={[CategoryButtonStyle.islocation, {backgroundColor: islocationEnabled  ? "#3083FF" : "white"}]}>
 
                     {/*<MaterialIcons name="location-disabled" size={20} color="#605f5f" />*/}
 
 
-                    {islocationEnabled  && Mylocation ?
-                        <MaterialIcons name="my-location" size={20} color={islocationEnabled  && Mylocation?  "white" : "#605f5f"}/> :
+                    {islocationEnabled  ?
+                        <MaterialIcons name="my-location" size={20} color={islocationEnabled  ?  "white" : "#605f5f"}/> :
                         <MaterialIcons name="location-disabled" size={20}
-                                       color={islocationEnabled  && Mylocation ? "white" : "#605f5f"}/>}<Text style={{
-                    color: islocationEnabled  && Mylocation? "white" : "#605f5f",
+                                       color={islocationEnabled ? "white" : "#605f5f"}/>}<Text style={{
+                    color: islocationEnabled  ? "white" : "#605f5f",
                     fontFamily: "PlusJakartaSans-Medium",
                     fontSize: 12
                 }}></Text>

@@ -9,7 +9,7 @@ import {
 import {BarChart, LineChart, PieChart} from "react-native-gifted-charts"
 
 import {TabView, SceneMap} from 'react-native-tab-view';
-import {LinearGradient, Stop} from 'react-native-svg';
+
 import Timeline from 'react-native-timeline-flatlist'
 import TravelHistoryRoute from "./_CategoryTabs/TravelHistoryRoute";
 import RecentTrips from "./_CategoryTabs/RecentTrips";

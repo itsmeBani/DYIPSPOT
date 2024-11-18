@@ -59,16 +59,7 @@ function Settings_ToggleBackgroundTasking(props) {
 
         <View style={SettingsStyle.permissionAndLocation}>
 
-            {CurrentUser?.role === "driver" && <UseSettingContainer label={"Profile"}>
-                <TouchableOpacity style={SettingsStyle.logoutbtn}>
 
-                    <MaterialIcons name="drive-file-rename-outline" size={20} color="#555a6a"/>
-
-                    <Text> Personal Information</Text>
-                </TouchableOpacity>
-
-
-            </UseSettingContainer>}
 
 
             <UseSettingContainer label={"Personalization"}>

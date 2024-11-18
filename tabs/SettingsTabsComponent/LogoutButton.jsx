@@ -42,7 +42,7 @@ function LogoutButton(props) {
                  }}>
 
 
-                     <MaterialIcons name="logout" size={20} color="#555a6a"/>
+                     <MaterialIcons name="logout" size={20} color="#f92e2e"/>
                      <Text style={BtnLogoutStyele.logoutbtntxt}>Log out</Text>
                  </TouchableOpacity>
              </View>

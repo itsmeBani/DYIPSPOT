@@ -29,20 +29,24 @@ function TravelHistoryRoute({JeepHistoryData, getTableDataFromOneTable}) {
 
 
     useEffect(() => {
-        fetchTravelHistory().then();
+        fetchTravelHistory().then()
     }, [JeepHistoryData]);
 
 
-    const filterTravelHistory = travelHistory?.filter(history => {
+    const filterTravelHistory = travelHistory?.filter((history, index, self) => {
         const tripDate = history?.Date?.seconds ? new Date(history.Date.seconds * 1000) : null;
         if (!tripDate) return false;
+
         if (!date) {
             return true;
         }
         const selectedDateWithoutTime = new Date(date.setHours(0, 0, 0, 0));
         const tripDateWithoutTime = new Date(tripDate.setHours(0, 0, 0, 0));
-        return selectedDateWithoutTime.getTime() === tripDateWithoutTime.getTime();
+        const tripIdentifier = `${history.address}_${tripDateWithoutTime.getTime()}`;
+        return self.findIndex(t => `${t.address}_${new Date(t.Date.seconds * 1000).setHours(0, 0, 0, 0)}` === tripIdentifier) === index;
     });
+
+
 
     const TravelHistoryList = filterTravelHistory?.map((driver) => {
         const latestTimestamp = driver?.Date?.seconds ? new Date(driver.Date.seconds * 1000) : null;
@@ -68,6 +72,8 @@ function TravelHistoryRoute({JeepHistoryData, getTableDataFromOneTable}) {
                 key: driver?.id && driver?.id
             })
     }) || []
+
+
 
     const renderitems = (rowData) => (
         <View style={{marginBottom: 10}}>

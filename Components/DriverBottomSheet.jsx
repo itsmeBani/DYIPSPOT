@@ -37,7 +37,9 @@ function DriverBottomSheet(props) {
     const [isLoading, setIsLoading] = useState(false)
     const {Address, setCoordinates} = useReverseGeoCoding()
     const [errorMsg,setErrorMsg]=useState(null)
-   const accessToken = process.env.EXPO_PUBLIC_MAPBOX_API_KEY
+
+    const [error,setError]=useState(null)
+     const accessToken = process.env.EXPO_PUBLIC_MAPBOX_API_KEY
    const countryId = "ph"
     const StartplacesAutocomplete = usePlacesAutocomplete("", accessToken, countryId);
     const EndplacesAutocomplete = usePlacesAutocomplete("", accessToken, countryId);
@@ -60,7 +62,7 @@ const [suggestedStartPointPlace,setSuggestedStartPointPlace]=useState()
 
 
     useEffect(()=>{
-
+        InitialStartPoint().then()
         getSuggestedPlace().then()
 
     },[])
@@ -71,21 +73,22 @@ const [suggestedStartPointPlace,setSuggestedStartPointPlace]=useState()
            await  Location.getLastKnownPositionAsync({
                 mayShowUserSettingsDialog: true,
                 accuracy: Location.Accuracy.BestForNavigation,
-            }).then(async (loc)=>{
+            }).then((loc)=>{
 
                 setCoordinates({
                     latitude: loc?.coords?.latitude,
                     longitude: loc?.coords?.longitude
                 })
-           await     setStartPoint({
+             setStartPoint({
                     startPoint: [loc?.coords?.longitude, loc?.coords?.latitude],
-                    Locality: Address?.data?.features[0]?.properties?.context?.locality?.name ,
-                    Region: Address?.data?.features[0]?.properties?.context?.region?.name,
-                    PlaceName: Address?.data.features[0].properties?.context?.place?.name ,
+                 Region: Address?.data?.features[0]?.properties?.context?.region?.name,
+                 PlaceName: Address?.data.features[0].properties?.context?.place?.name ,
+                    Locality: Address?.data?.features[0]?.properties?.context?.locality?.name  ,
+
                 })
             })
 
-            await console.log(Address)
+            console.log(Address)
         } catch (e) {
             console.log(e)
         }
@@ -107,6 +110,7 @@ const [suggestedStartPointPlace,setSuggestedStartPointPlace]=useState()
         if (startPoint === null) {
             await InitialStartPoint()
         }
+
         if (destination === null) {
             setErrorMsg("Destination is Required ")
             setIsLoading(false)
@@ -154,6 +158,7 @@ const [suggestedStartPointPlace,setSuggestedStartPointPlace]=useState()
 
            await addDoc(travelHistoryRef, Trips);
             setErrorMsg(null)
+            setError(null)
             StartplacesAutocomplete.setValue("")
             EndplacesAutocomplete.setValue("")
             setIsLoading(false)
@@ -166,8 +171,9 @@ const [suggestedStartPointPlace,setSuggestedStartPointPlace]=useState()
 
 
         } catch (e) {
-            alert(e)
+            setError("Something went wrong")
             setIsLoading(false)
+
             console.error("Error updating driver document: ", e);
         }
 
@@ -212,7 +218,6 @@ const [suggestedStartPointPlace,setSuggestedStartPointPlace]=useState()
                                    style={DriverBottomSheetStyle.contentContainer}>
 
                 <Text style={DriverBottomSheetStyle.headerText}>Set Route</Text>
-
             <View style={{flex:1, height:"100%"}}>
                 <View style={{paddingHorizontal: 20, zIndex: 111}}>
                     <Text style={DriverBottomSheetStyle.label}>Start Point</Text>
@@ -245,8 +250,8 @@ const [suggestedStartPointPlace,setSuggestedStartPointPlace]=useState()
 
                 </View>
 
-                {suggestedStartPointPlace &&
-                    <SuggestedPlace place={suggestedStartPointPlace}/>}
+                {/*{suggestedStartPointPlace &&*/}
+                {/*    <SuggestedPlace place={suggestedStartPointPlace}/>}*/}
 
                 <View style={{paddingHorizontal: 20, flex: 1, overflow: "visible"}}>
                     <Text style={DriverBottomSheetStyle.label}>Destination Point</Text>
@@ -280,8 +285,8 @@ const [suggestedStartPointPlace,setSuggestedStartPointPlace]=useState()
                     }
 
                 </View>
-                {suggestedEndPointPlace &&
-                    <SuggestedPlace place={suggestedEndPointPlace}/>}
+                {/*{suggestedEndPointPlace &&*/}
+                {/*    <SuggestedPlace place={suggestedEndPointPlace}/>}*/}
 
                 <View style={{paddingHorizontal: 20, paddingTop: 10,}}>
                     <TouchableOpacity activeOpacity={0.8} onPress={HandleSubmitRoute} disabled={isLoading}
@@ -291,7 +296,17 @@ const [suggestedStartPointPlace,setSuggestedStartPointPlace]=useState()
 
 
                     </TouchableOpacity>
+                    {error   &&  <Text style={{
+                        color: '#f56a6a',
+                        fontSize: 10,
+                        textAlign:"center",
+                        fontFamily: "PlusJakartaSans-Medium",
+                    }}>
+                        {error && error}
+                    </Text>
+                    }
                 </View>
+
             </View>
 
             </BottomSheetScrollView>

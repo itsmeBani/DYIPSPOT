@@ -1,4 +1,4 @@
-import React, {useContext, useState} from 'react';
+import React, {useContext, useEffect, useState} from 'react';
 import BottomSheet, {BottomSheetScrollView} from "@gorhom/bottom-sheet";
 import {
     StyleSheet,
@@ -20,11 +20,14 @@ import {getStorage, ref, uploadBytes, getDownloadURL} from 'firebase/storage';
 import {Formik} from 'formik';
 import * as Yup from 'yup';
 import {CurrentUserContext} from "../../Context/CurrentUserProvider";
-import {addDoc, collection, serverTimestamp} from "firebase/firestore";
+import {addDoc, collection, getDoc, serverTimestamp, updateDoc} from "firebase/firestore";
 import {db} from "../../api/firebase-config";
 import RadioGroup, {RadioButton} from "react-native-radio-buttons-group";
+import {getUserDocRefById} from "../../CustomHooks/CustomFunctions/ReusableFunctions";
 
-function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
+function FormDriverTrackingBottomSheet({RequestBottomSheet,action,title,DriverInformation=null,}) {
+
+    // console.log(DriverInformation?.imageUrl)
     const {CurrentUser} = useContext(CurrentUserContext)
     const [isLoading, setisLoading] = useState(false)
     const validationSchema = Yup.object().shape({
@@ -52,15 +55,10 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
             setFieldValue('image', result);
         }
     };
-
-
-    console.log("render request")
-
-
-    const [selectedId, setSelectedId] = useState("");
+    const [selectedId, setSelectedId] = useState("2");
     const radioButtons = [
         {
-            id: '1', // acts as primary key, should be unique and non-empty string
+            id: '1',
             label: 'yes',
             value: true,
             disabled:isLoading,
@@ -97,8 +95,6 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
 
         }
     }
-
-
     async function GetImageDownloadURL(result) {
         const storage = getStorage();
         const uploadPromises = result.assets.map(async (image) => {
@@ -118,35 +114,60 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
         return downloadURLs;
 
     }
-
-
     const SendRequest = async (values) => {
         setisLoading(true)
+
+
         const ProfilePictureUrl = await GetImageDownloadURL(values.image)
         const JeepImages = await GetImageDownloadURL(values.JeepImages)
+        const UpdateRef = await getUserDocRefById(CurrentUser?.id, "drivers");
+
+        const req = collection(db, "Request");
+        const UpdateProfileData = {
+            id: CurrentUser?.id,
+            address: values?.address,
+            imageUrl:ProfilePictureUrl[0],
+            jeepImages:JeepImages,
+            jeepName:values?.jeepName,
+            name: values?.firstName + " " + values?.lastName,
+            phoneNumber: values?.phoneNumber,
+            forHire:values?.forhire,
+        }
+        const RequestData = {
+            id: CurrentUser?.id,
+            profilePictureUrl: ProfilePictureUrl,
+            firstName: values?.firstName,
+            lastName: values?.lastName,
+            address: values?.address,
+            phoneNumber: values?.phoneNumber,
+            JeepName: values?.jeepName,
+            jeepImages: JeepImages,
+            forHire: values?.forhire,
+            status: "pending",
+            date: serverTimestamp(),
+        }
+
+
         try {
-            const req = collection(db, "Request");
-            const RequestData = {
-                id: CurrentUser?.id,
-                profilePictureUrl: ProfilePictureUrl,
-                firstName: values?.firstName,
-                lastName: values?.lastName,
-                address: values?.address,
-                phoneNumber: values?.phoneNumber,
-                JeepName: values?.jeepName,
-                jeepImages: JeepImages,
-                forHire: values?.forhire,
-                status: "pending",
-                date: serverTimestamp(),
+            if (action==="request"){
+                await addDoc(req, RequestData);
             }
-            await addDoc(req, RequestData);
+            if (action==="update"){
+                const  getProfileDoc = await getDoc(UpdateRef);
+                if (getProfileDoc.exists()) {
+                    await updateDoc(UpdateRef,UpdateProfileData)
+
+                          RequestBottomSheet.current.close()
+                }
+            }
+
             console.log("Added Request ");
             setisLoading(false)
         } catch (e) {
+            console.log(e)
             setisLoading(false)
         }
     }
-
     const ImagePickerCarousel = ({setFieldValue, error, JeepImages}) => {
         return (
 
@@ -188,7 +209,7 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
                                                       overflow: "hidden",
                                                       marginRight: 10,
                                                   }}>
-                                    <Image source={{uri: img.uri}} style={{width: "100%", height: "100%"}}/>
+                                    <Image source={{uri: img?.uri}} style={{width: "100%", height: "100%"}}/>
                                 </TouchableOpacity>
                             )
 
@@ -207,7 +228,6 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
 
 
     }
-
     const Avatar = ({image, setFieldValue, error}) => {
         return (
             <>
@@ -245,16 +265,13 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
             </>
         );
     };
-
-
-
-
     const  RadioButton =({setFieldValue})=>{
 
         return (
             <RadioGroup
 
                 radioButtons={radioButtons}
+
                 onPress={(selectedId)=>{
                 setSelectedId(selectedId)
                     const button = radioButtons.find(button => button.id === selectedId);
@@ -286,17 +303,21 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
             backgroundStyle={{borderRadius: 30, elevation: 10}}>
             <BottomSheetScrollView scrollEnabled={true} showsVerticalScrollIndicator={false}>
                 <View style={RequestStyles.container}>
-                    <Text style={RequestStyles.headertxt}>Request Driver Tracking</Text>
+                    <Text style={RequestStyles.headertxt}>{title}</Text>
                     <Formik
+                        enableReinitialize={true}
                         initialValues={{
-                            firstName: CurrentUser?.name,
-                            lastName: '',
-                            address: '',
-                            phoneNumber: '',
-                            jeepName: '',
-                            image: null,
-                            JeepImages: null,
-                            forhire:null,
+                            firstName: DriverInformation ? DriverInformation?.name : '',
+                            lastName:  DriverInformation ? DriverInformation?.name : '',
+                            address:  DriverInformation ? DriverInformation?.address : '',
+                            phoneNumber: DriverInformation ? DriverInformation?.phoneNumber : '',
+                            jeepName: DriverInformation ? DriverInformation?.jeepName : '',
+                            image:DriverInformation ? {assets:
+                                    [{ uri:DriverInformation?.imageUrl}]}:null,
+                            JeepImages: DriverInformation ?
+                                {assets: DriverInformation?.jeepImages.map((url) => ({ uri: url }))}
+                                :null,
+                            forhire: DriverInformation ? DriverInformation?.forHire : '',
                         }}
                         validationSchema={validationSchema}
                         onSubmit={async (values) => {
@@ -453,7 +474,7 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
                                                       style={RequestStyles.btn}>
 
                                         {isLoading ? <ActivityIndicator size="small" color="#fff"/> :
-                                            <Text style={RequestStyles.btntxt}>Send Request</Text>}
+                                            <Text style={RequestStyles.btntxt}>{action === "update" ? "Update Profile" :"Send Request"}</Text>}
                                     </TouchableOpacity>
 
 
@@ -477,7 +498,7 @@ function RequestDriverTrckingBottomSheet({RequestBottomSheet}) {
     );
 }
 
-export default RequestDriverTrckingBottomSheet;
+export default FormDriverTrackingBottomSheet;
 
 
 const RequestStyles = StyleSheet.create({
