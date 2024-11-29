@@ -40,7 +40,7 @@ function CategoryButton({Mylocation, setMylocation}) {
         camera.current?.setCamera({
 
                 centerCoordinate: [120.49737362993602, 16.91644986476775],
-                pitch: 70,
+            pitch: 60,
                 heading: 300,
                 zoomLevel: 13,
                 animationMode: "flyTo"
@@ -58,7 +58,7 @@ function CategoryButton({Mylocation, setMylocation}) {
         camera.current?.setCamera({
 
                 centerCoordinate: [120.49737362993602, 16.91644986476775],
-                pitch: 70,
+            pitch: 60,
                 heading: 300,
                 zoomLevel: 13,
                 animationMode: "flyTo"
@@ -110,9 +110,9 @@ function CategoryButton({Mylocation, setMylocation}) {
             try {
                 const response = await CheckifUserEnabledGps()
                 if (response) {
-                    setMylocation(!Mylocation)
+                    setMylocation(true)
 
-                 setFallowCurrentUser(!Mylocation)
+                 setFallowCurrentUser(true)
 
                 }
 

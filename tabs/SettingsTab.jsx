@@ -18,9 +18,10 @@ import UseSettingContainer from "./SettingsTabsComponent/UseSettingContainer";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import FormDriverTrackingBottomSheet from "./SettingsTabsComponent/FormDriverTrckingBottomSheet";
 import {getUserDocRefById} from "../CustomHooks/CustomFunctions/ReusableFunctions";
+import MapStyle from "./SettingsTabsComponent/MapStyle";
 
 export const SettingsTab = (props) => {
-    const {CurrentUser, setCurrentUser} = useContext(CurrentUserContext)
+    const {CurrentUser, setCurrentUser,setRefresh,refresh} = useContext(CurrentUserContext)
     const [AlreadyApply, setAlreadyApply] = useState(false)
     const [isLoading, setLoading] = useState(true)
     const [Applicant, setApplicant] = useState(null); // State to hold fetched user data
@@ -33,7 +34,7 @@ const [loading,setloading]=useState(false)
     }
 
 
-
+console.log(CurrentUser)
     const EditBottomSheet = useRef()
     const OpenEditProfileBottomSheet = async () => {
         setloading(true)
@@ -86,9 +87,6 @@ const [loading,setloading]=useState(false)
 
 
 
-
-
-
     const renderContent = () => {
         switch (true) {
             case CurrentUser?.role === "passenger" && AlreadyApply:
@@ -133,8 +131,7 @@ const [loading,setloading]=useState(false)
 
                    </UseSettingContainer>}
                </View>
-                <Settings_ToggleBackgroundTasking/>
-
+                          <Settings_ToggleBackgroundTasking/>
                 {
                     CurrentUser.role === "passenger" && (
                         <>
@@ -142,7 +139,9 @@ const [loading,setloading]=useState(false)
                         </>
                     )
                 }
-
+                <View style={{paddingHorizontal:10,paddingTop:4,zIndex:-1}}>
+                    <MapStyle/>
+                </View>
                 <LogoutButton/>
 
 

@@ -26,7 +26,10 @@ function JeepStatusProvider({children}) {
     };
     const closeAnimatedModal =async () => {
         translateY.value = withTiming(-300, {duration: 200});
+        setJeepStatusModal(null)
         setJeepid(null)
+        sethideRouteline(false)
+
 
     };
 
@@ -37,7 +40,7 @@ function JeepStatusProvider({children}) {
              centerCoordinate: [lon, lat],
              pitch: 60,
              heading:heading,
-             zoomLevel: 16,
+             zoomLevel: 15,
              animationMode: "flyTo"
 
          }

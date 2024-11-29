@@ -1,6 +1,6 @@
 import React, {useContext, useEffect, useState} from 'react';
-import {StyleSheet} from 'react-native';
-import MapboxGL, {Camera, LocationPuck} from '@rnmapbox/maps';
+import {Image, StyleSheet, TouchableOpacity, View, Text} from 'react-native';
+import MapboxGL, {Camera, Images, LocationPuck} from '@rnmapbox/maps';
 import pin from '../assets/passengericon.png';
 import pin1 from '../assets/jeepLogoPin.png';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
@@ -17,14 +17,47 @@ import {getRoute} from "../api/DirectionApi";
 MapboxGL.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_API_KEY);
 const Map = ({Mylocation}) => {
     const [hasLocationPermission, setHasLocationPermission] = useState(false);
-    const { CurrentUser} = useContext(CurrentUserContext)
-    const {FallowCurrentUser,setFallowCurrentUser}=useContext(JeepStatusContext)
-    const {JeepStatusModal, setJeepStatusModal,isPassenger, isJeeps, line,camera,jeepid,   hideRouteline, sethideRouteline, setline} = useContext(JeepStatusContext)
+    const {CurrentUser, mapStyle} = useContext(CurrentUserContext)
+    const {FallowCurrentUser, setFallowCurrentUser} = useContext(JeepStatusContext)
+    const {
+        JeepStatusModal,
+        setJeepid,
+        setIsPassenger,
+        setIsJeeps,
+        setJeepStatusModal,
+        isPassenger,
+        isJeeps,
+        line,
+        camera,
+        jeepid,
+        hideRouteline,
+        sethideRouteline,
+        setline
+    } = useContext(JeepStatusContext)
     const [userLocationData] = useFetchLocation("users");
 
     const [driverLocationData] = useFetchLocation("drivers");
-    const FilterCurrentUser = userLocationData?.filter(user => user?.status === "waiting");
+    const FilterCurrentUser = userLocationData?.filter(user => user?.id !== CurrentUser?.id && user?.status === "waiting");
 
+
+    const {OpenBottomSheet} = useContext(CurrentUserContext)
+
+
+    const setJeepStatusAndLocation = async (id) => {
+        setFallowCurrentUser(false)
+        await OpenBottomSheet()
+        await setJeepid(id)
+        sethideRouteline(false)
+        setIsJeeps(true)
+        setIsPassenger(false)
+    }
+    const HandleMarkerOnPress = async (event) => {
+        await setJeepStatusAndLocation(event?.features[0]?.properties?.id)
+    }
+
+    const HandleMarkerWithImageOnPress = async (id) => {
+        await setJeepStatusAndLocation(id)
+    }
     const PassengerLocationMarker = {
         type: 'FeatureCollection',
         features: FilterCurrentUser?.map(user => ({
@@ -42,13 +75,14 @@ const Map = ({Mylocation}) => {
             },
         })),
     };
-    const FilterCurrentDriver = driverLocationData?.filter(user =>  user?.id !== CurrentUser?.id );
+    const FilterCurrentDriver = driverLocationData?.filter(user => user?.id !== CurrentUser?.id);
 
     const DriverLocationMarker = {
         type: 'FeatureCollection',
         features: FilterCurrentDriver?.map(user => ({
             type: 'Feature',
             properties: {
+                // icon: `image-${user?.id}`,
                 icon: 'pin1',
                 id: user?.id,
                 name: user?.name,
@@ -64,7 +98,7 @@ const Map = ({Mylocation}) => {
 
 
     const [loading, setloading] = useState(false)
-    const [currentStatus, setCurrentStatus] =useState(null)
+    const [currentStatus, setCurrentStatus] = useState(null)
 
 
     useEffect(() => {
@@ -75,7 +109,7 @@ const Map = ({Mylocation}) => {
                 if (DriverUserdocRef) {
                     const userDocSnap = await getDoc(DriverUserdocRef);
                     if (userDocSnap.exists()) {
-                       setCurrentStatus(userDocSnap.data().status);
+                        setCurrentStatus(userDocSnap.data().status);
                         setloading(false)
                     }
                 }
@@ -84,9 +118,7 @@ const Map = ({Mylocation}) => {
             }
         };
         getStatus().then();
-    }, [userLocationData,driverLocationData]);
-
-
+    }, [userLocationData, driverLocationData]);
 
 
     return (
@@ -95,15 +127,18 @@ const Map = ({Mylocation}) => {
             <MapboxGL.MapView
                 projection={"globe"}
                 style={styles.map}
-                styleURL={"mapbox://styles/mapbox/streets-v12"}
+                styleURL={mapStyle ? mapStyle : "mapbox://styles/mapbox/streets-v12"}
                 pitchEnabled={true}
-                onDidFinishRenderingMap={(e)=>{console.log(e)}}
+                onDidFinishRenderingMap={(e) => {
+                    console.log(e)
+                }}
                 userLocationVisible={hasLocationPermission}
                 scaleBarEnabled={false}
                 attributionEnabled={false}
                 logoEnabled={true}
+
                 onCameraChanged={state => {
-                    if (state.gestures.isGestureActive){
+                    if (state.gestures.isGestureActive) {
                         setFallowCurrentUser(false)
                     }
                 }
@@ -111,93 +146,100 @@ const Map = ({Mylocation}) => {
                 logoPosition={{top: 10, right: 10}}
             >
 
-                { Mylocation &&
+                {Mylocation &&
                     <LocationPuck
+                        puckBearingEnabled={true}
 
-                    puckBearingEnabled={true}
-
-                    visible={true}
-                    pulsing={{
-                        isEnabled: true,
-                        radius: 70,
-                        color: currentStatus === "online" ? "#34C759"
-                            : currentStatus === "waiting" ? "#FFCC00"
-                                : "#FF3B30"
-                    }}
-                />
-
-
+                        visible={true}
+                        pulsing={{
+                            isEnabled: true,
+                            radius: 70,
+                            color: currentStatus === "online" ? "#34C759"
+                                : currentStatus === "waiting" ? "#FFCC00"
+                                    : "#FF3B30"
+                        }}
+                    />
 
 
                 }
                 <Camera
                     heading={-50}
-                    animationDuration={7000}
                     ref={camera}
                     zoomLevel={16}
                     followUserLocation={FallowCurrentUser}
-                  defaultSettings={{
-                      centerCoordinate:[120.448687, 16.933407],
-                      pitch:60,
+                    centerCoordinate={[120.448687, 16.933407]}
+                    pitch={40}
 
+                    animationDuration={4000} animationMode={"flyTo"}
 
-                      animationMode:"flyTo",
-
-                  }}
-                    followZoomLevel={18.8}
+                    followZoomLevel={15.8}
                 />
-                {driverLocationData && isJeeps ?
-                    <MapboxGL.ShapeSource id="drivermarkerSource" cluster={true}
-                                          shape={DriverLocationMarker}>
-                        <MapboxGL.Images images={{pin1}}/>
-                        <MapboxGL.SymbolLayer
+                {/*{driverLocationData && isJeeps ?*/}
+                {/*    <MapboxGL.ShapeSource id="drivermarkerSource" cluster={true}*/}
+                {/*                          shape={DriverLocationMarker} onPress={event => HandleMarkerOnPress(event)}>*/}
+                {/*       */}
 
-                            id="drivermarkerSymbolLayer"
-                            layerIndex={200}
+                {/*<MapboxGL.Images*/}
+                {/*    images={FilterCurrentDriver.reduce((acc, user) => {*/}
+                {/*        if (user?.imageUrl) {*/}
+                {/*            // Use the user's image URL (make sure the URLs are correct and accessible)*/}
+                {/*            acc[`image-${user?.id}`] = user?.jeepImages[0];*/}
+                {/*        }*/}
+                {/*        return acc;*/}
+                {/*    }, {})}*/}
+                {/*/>*/}
 
-                            style={{
-                                iconImage: ['get', 'icon'],
-                                iconSize: 0.25,
-                                textSize: 16,
-                                iconAllowOverlap: true,
-                                iconAnchor: 'bottom',
+                {/*    <MapboxGL.Images images={{pin1}}/>*/}
+                {/*    <MapboxGL.SymbolLayer*/}
 
-                                // iconPitchAlignment: 'map',
+                {/*        id="drivermarkerSymbolLayer"*/}
+                {/*        layerIndex={200}*/}
 
-                            }}
-                            onPress={(e) => console.log(e.features[0])}
-                        />
+                {/*        style={{*/}
+                {/*            iconImage: ['get', 'icon'],*/}
+                {/*            iconSize: 0.25,*/}
+                {/*            textSize: 16,*/}
+                {/*            iconAllowOverlap: true,*/}
+                {/*            iconAnchor: 'bottom',*/}
 
-                        <MapboxGL.CircleLayer
-                            id="driveclusteredPoints"
-                            layerIndex={200}
-                            filter={['has', 'point_count']}
-                            style={{
-                                circleColor: '#83a9ff',
-                                circleRadius: ['step', ['get', 'point_count'], 20, 100, 30, 750, 40],
-                                circleStrokeWidth: 10,
-                                circleStrokeColor: 'rgba(164,195,255,0.5)',
+                {/*            // iconPitchAlignment: 'map'*/}
 
-                            }}
+                {/*        }}*/}
+                {/*        onPress={(e) => console.log(e.features[0])}*/}
+                {/*    />*/}
 
-                        />
+                {/*    <MapboxGL.CircleLayer*/}
+                {/*        id="driveclusteredPoints"*/}
+                {/*        layerIndex={200}*/}
+                {/*        filter={['has', 'point_count']}*/}
+                {/*        style={{*/}
+                {/*            circleColor: '#83a9ff',*/}
+                {/*            circleRadius: ['step', ['get', 'point_count'], 20, 100, 30, 750, 40],*/}
+                {/*            circleStrokeWidth: 10,*/}
+                {/*            circleStrokeColor: 'rgba(164,195,255,0.5)',*/}
 
-                        <MapboxGL.SymbolLayer
-                            id="driverclusteredCount"
-                            filter={['has', 'point_count']}
+                {/*        }}*/}
 
-                            style={{
-                                textField: '{point_count_abbreviated}',
-                                textSize: 12,
-                                textPadding: 10,
-                                textColor: '#ffffff',
-                                textIgnorePlacement: true,
-                                textAllowOverlap: true,
+                {/*    />*/}
 
-                            }}
-                        />
+                {/*    <MapboxGL.SymbolLayer*/}
+                {/*        id="driverclusteredCount"*/}
+                {/*        filter={['has', 'point_count']}*/}
 
-                    </MapboxGL.ShapeSource> : null}
+                {/*        style={{*/}
+                {/*            textField: '{point_count_abbreviated}',*/}
+                {/*            textSize: 12,*/}
+                {/*            textPadding: 10,*/}
+                {/*            textColor: '#ffffff',*/}
+                {/*            textIgnorePlacement: true,*/}
+                {/*            textAllowOverlap: true,*/}
+
+                {/*        }}*/}
+                {/*    />*/}
+
+                {/*</MapboxGL.ShapeSource> : null}*/}
+
+
                 {userLocationData && isPassenger ?
                     <MapboxGL.ShapeSource id="passengermarkerSource" cluster={true}
                                           shape={PassengerLocationMarker}>
@@ -209,7 +251,7 @@ const Map = ({Mylocation}) => {
                                 iconImage: ['get', 'icon'],
                                 iconSize: 0.3,
                                 textSize: 16,
-                                symbolAvoidEdges: true,
+
                                 iconIgnorePlacement: true,
                                 iconAllowOverlap: true,
                                 iconAnchor: 'bottom',
@@ -223,7 +265,7 @@ const Map = ({Mylocation}) => {
                             style={{
 
                                 circleColor: '#3083FF',
-                                
+
                                 circleRadius: ['step', ['get', 'point_count'], 20, 100, 30, 750, 40],
                                 circleStrokeWidth: 10,
                                 circleStrokeColor: 'rgba(48,131,255,0.38)',
@@ -244,8 +286,7 @@ const Map = ({Mylocation}) => {
                     </MapboxGL.ShapeSource> : null}
 
 
-
-                {JeepStatusModal?.distance && !hideRouteline  ?
+                {JeepStatusModal?.distance && !hideRouteline ?
                     <MapboxGL.ShapeSource
 
                         id="routeSource"
@@ -259,16 +300,85 @@ const Map = ({Mylocation}) => {
                             },
                         }}>
                         <MapboxGL.LineLayer
-                            layerIndex={100}
+                            layerIndex={mapStyle === "mapbox://styles/mapbox/streets-v12" ? 100 : 10}
                             slot="bottom"
                             id="exampleLineLayer"
                             style={styles1.lineLayer}
                         />
-                    </MapboxGL.ShapeSource>:null
+                    </MapboxGL.ShapeSource> : null
                 }
 
-            </MapboxGL.MapView>
 
+                {/*{FilterCurrentDriver?.map((marker) => (*/}
+                {/*    <MapboxGL.PointAnnotation*/}
+                {/*        onSelected={()=>HandleMarkerOnPress(marker?.id)}*/}
+
+                {/*        key={marker.id}*/}
+                {/*        id={marker.id}*/}
+
+                {/*        coordinate={[marker.longitude, marker.latitude]}  // Set marker coordinates*/}
+                {/*    >*/}
+                {/*        <View style={{*/}
+                {/*            borderRadius: 30,*/}
+                {/*            borderWidth: 3,*/}
+
+                {/*            borderColor: '#fff',*/}
+                {/*            overflow: 'hidden',  // Ensures the image stays within the circular boundary*/}
+
+                {/*        }}>*/}
+
+                {/*            <Image*/}
+                {/*                source={{uri: marker.jeepImages[0]}}  // Assuming jeepImages is an array of URLs*/}
+                {/*                style={{*/}
+                {/*                    width: 35,*/}
+                {/*                    height: 35,*/}
+                {/*                    zIndex:11111,*/}
+
+                {/*                }*/}
+                {/*                }*/}
+                {/*            />*/}
+
+                {/*        </View>*/}
+                {/*    </MapboxGL.PointAnnotation>*/}
+                {/*))}*/}
+
+
+                {FilterCurrentDriver?.map((driver) => {
+
+
+                    return (
+                        <MapboxGL.MarkerView  key={driver.id}
+                            allowOverlap={true}
+                            coordinate={[driver?.longitude, driver?.latitude]}
+                        >
+                            <TouchableOpacity
+                                activeOpacity={0.9}
+                                onPress={() => HandleMarkerWithImageOnPress(driver?.id)}
+                                style={{alignItems: "center"}} // Center text and image together
+                            >
+                                <View>
+
+                                </View>
+                                <Image
+                                    key={driver.id}
+                                    source={{uri: driver?.jeepImages[0]}} // Assuming jeepImages is an array of URLs
+                                    style={{
+                                        width: 35,
+                                        height: 35,
+                                        borderRadius: 100,
+                                        borderWidth: 3,
+                                        //     borderColor: driver?.status === "online" ? "#34C759" : driver?.status === "waiting" ? "#FFCC00" : "#FF3B30",
+                                        borderColor: "white",
+
+
+                                    }}
+                                />
+                            </TouchableOpacity>
+                        </MapboxGL.MarkerView>
+
+                    )
+                })}
+            </MapboxGL.MapView>
 
 
         </GestureHandlerRootView>

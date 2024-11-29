@@ -15,11 +15,11 @@ function PendingOrApproved({status = null, Applicant}) {
         refreshSettings, setrefreshSettings, stopWatchingLocation
     } = useContext(PermissionAndTaskManagerContext)
     const handlePress = async () => {
-        if (status === "pending" || status === "cancelled") {
+        if (status.trim().toLowerCase() === "pending" || status === "cancelled") {
             await CancelRequest();
         }
 
-        if (status === "approved") {
+        if (status.trim().toLowerCase() === "approved") {
             await LoginAsDriver()
         }
     };
@@ -110,41 +110,65 @@ function PendingOrApproved({status = null, Applicant}) {
     }
 
 
+    const normalizeStatus = (status) => status?.trim().toLowerCase() || "";
+
     const getStatusColor = () => {
-        if (status === "approved") return "#F0F9F0FF";
-        if (status === "pending") return "#fff8e6";
-        if (status === "cancelled") return "#ffe6e6"; // Color for "cancel"
-        return "#fff";
+        switch (normalizeStatus(status)) {
+            case "approved":
+                return "#F0F9F0FF";
+            case "pending":
+                return "#fff8e6";
+            case "cancelled":
+                return "#ffe6e6";
+            default:
+                return "#fff";
+        }
     };
 
     const getStatusIcon = () => {
-        if (status === "approved") return <MaterialCommunityIcons style={PendingOrApprovedStyle.icon}
-                                                                  name="check-decagram" size={20} color="#08c552"/>;
-        if (status === "pending") return <MaterialCommunityIcons style={PendingOrApprovedStyle.icon}
-                                                                 name="clock-time-five" size={20} color="#FECA5BFF"/>;
-        if (status === "cancelled") return <MaterialCommunityIcons style={PendingOrApprovedStyle.icon} name="cancel"
-                                                                   size={20} color="#FF5252FF"/>;
-        return null;
+        const styles = PendingOrApprovedStyle.icon;
+        switch (normalizeStatus(status)) {
+            case "approved":
+                return <MaterialCommunityIcons style={styles} name="check-decagram" size={20} color="#08c552" />;
+            case "pending":
+                return <MaterialCommunityIcons style={styles} name="clock-time-five" size={20} color="#FECA5BFF" />;
+            case "cancelled":
+                return <MaterialCommunityIcons style={styles} name="cancel" size={20} color="#FF5252FF" />;
+            default:
+                return null;
+        }
     };
 
     const getHighlightColor = () => {
-        if (status === "approved") return "rgba(8,197,82,0.76)";
-        if (status === "pending") return "#FECA5BFF";
-        if (status === "cancelled") return "#FF5252FF";
-        return "#feca5b";
+        switch (normalizeStatus(status)) {
+            case "approved":
+                return "rgba(8,197,82,0.76)";
+            case "pending":
+                return "#FECA5BFF";
+            case "cancelled":
+                return "#FF5252FF";
+            default:
+                return "#feca5b";
+        }
     };
 
     const getStatusText = () => {
-        if (status === "approved") return "approved";
-        if (status === "pending") return "pending...";
-        if (status === "cancelled") return "cancelled";
-        return "";
+        switch (normalizeStatus(status)) {
+            case "approved":
+                return "approved";
+            case "pending":
+                return "pending...";
+            case "cancelled":
+                return "cancelled";
+            default:
+                return "";
+        }
     };
 
     const getButtonText = () => {
-        if (status === "approved") return "Login as driver";
-        if (status === "pending") return "Cancel";
-        if (status === "cancelled") return "Reapply";
+        if (status.trim().toLowerCase() === "approved") return "Login as driver";
+        if (status.trim().toLowerCase() === "pending") return "Cancel";
+        if (status.trim().toLowerCase() === "cancelled") return "Reapply";
         return "";
     };
 
@@ -179,10 +203,10 @@ function PendingOrApproved({status = null, Applicant}) {
                 </View>
                 <View style={{display: "flex"}}>
                     <TouchableOpacity disabled={loading} onPress={handlePress}
-                                      style={status === "approved" ? PendingOrApprovedStyle.approved : PendingOrApprovedStyle.cancel}>
+                                      style={status.trim().toLowerCase() === "approved" ? PendingOrApprovedStyle.approved : PendingOrApprovedStyle.cancel}>
                         {loading ? <ActivityIndicator size="small" color={getHighlightColor()}/>:
                             <Text
-                                style={status === "approved" ? PendingOrApprovedStyle.approvedtxt : PendingOrApprovedStyle.canceltxt}>{getButtonText()}</Text>
+                                style={status.trim().toLowerCase() === "approved" ? PendingOrApprovedStyle.approvedtxt : PendingOrApprovedStyle.canceltxt}>{getButtonText()}</Text>
 
 
                         }

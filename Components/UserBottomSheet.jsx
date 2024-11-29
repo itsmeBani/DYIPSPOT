@@ -56,11 +56,15 @@ const UserBottomSheet = () => {
             });
         } catch (error) {
             console.error("Error fetching driver data: ", error);
+            BottomSheetRef.current.close()
         }
     };
 
     useEffect(() => {
-        if (!jeepid) return;
+        if (!jeepid) {
+            BottomSheetRef.current.close()
+            return
+        }
         const unsubscribe = fetchDriverData();
         return () => {
             if (unsubscribe) unsubscribe();
@@ -75,7 +79,7 @@ const UserBottomSheet = () => {
             <PopUpModal/>
             <BottomSheet
                 ref={BottomSheetRef}
-                snapPoints={['40%', '40%', '50%']}
+                snapPoints={['40%', '20%', '50%']}
                 enableOverDrag={false}
                 index={-1}
                 enablePanDownToClose={true}
@@ -127,7 +131,7 @@ const UserBottomSheet = () => {
                             {jeepData?.endpoint !== null && jeepData?.startpoint !== null ?
                                 <View style={UserBottomStyle.timelinecon}>
                                     <Timeline Startpoint={jeepData?.startpoint} Destination={jeepData?.endpoint}/>
-                                </View> : null}
+                                </View> : null} 
 
                             <View style={UserBottomStyle.StatusContainer}>
                                 <IconStatusBox icon={passengers} customStyle={{

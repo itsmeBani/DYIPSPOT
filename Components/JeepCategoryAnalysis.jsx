@@ -68,6 +68,7 @@ export default function JeepCategoryAnalysis({data=null,getTableDataFromOneTable
                 return <PassengerAnalysis PassengersData={data} getTableDataFromOneTable={getTableDataFromOneTable} />;
             case 'second':
                 return <TravelHistoryRoute  JeepHistoryData={data} getTableDataFromOneTable={getTableDataFromOneTable} />;
+
             case 'third':
                 return <RecentTrips  RecentTrips={data} getTableDataFromOneTable={getTableDataFromOneTable}/>
             default:

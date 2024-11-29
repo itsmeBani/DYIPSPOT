@@ -6,6 +6,7 @@ export const CurrentUserContext = createContext({});
 function CurrentUserProvider({children}) {
     const [View, setView] = useState("50%")
     const [CurrentUser, setCurrentUser] = useState(null)
+    const [mapStyle, setMapStyle] = useState(null)
     const [token, settoken] = useState("")
     const [refresh, setRefresh] = useState  (false)
     const BottomSheetRef = useRef()
@@ -16,7 +17,7 @@ function CurrentUserProvider({children}) {
 
 
 
-
+    // mapStyle
     async function getLocalUserCredentials() {
         AsyncStorage.getItem("UserCredentials").then(async userdata => {
             if (userdata) {
@@ -28,9 +29,22 @@ function CurrentUserProvider({children}) {
             setCurrentUser(null)
         });
     }
+    async function getPreferMapStyle() {
+        AsyncStorage.getItem("mapStyle").then(async style => {
+            if (style) {
+                setMapStyle(style);
+
+            }
+        }).catch(async error => {
+            console.error("Error fetching style:", error);
+            setCurrentUser(null)
+        });
+    }
 
     useEffect(() => {
         getLocalUserCredentials().then()
+        getPreferMapStyle().then()
+
     }, [refresh]);
 
 
@@ -54,7 +68,7 @@ function CurrentUserProvider({children}) {
                 View,
                 BottomSheetRef,
                 OpenBottomSheet,
-                setRefresh,
+                setRefresh,mapStyle,
                 token, settoken, refresh, CurrentUser,setCurrentUser,
             }}>
             {children}

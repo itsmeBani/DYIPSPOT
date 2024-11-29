@@ -8,7 +8,7 @@ import {CurrentUserContext} from "../Context/CurrentUserProvider";
 import {
     View,
     Text, Image,
-    StyleSheet, ScrollView, AppState, Button, SafeAreaView, Dimensions, TouchableOpacity,
+    StyleSheet, ScrollView, AppState, Button, SafeAreaView, Dimensions, TouchableOpacity, RefreshControl,
 
 } from 'react-native';
 import {MapboxPlacesAutocomplete} from "../Components/MapboxPlacesAutocomplete";
@@ -34,9 +34,9 @@ function HomeTab(props) {
     const width = Dimensions.get('window').width;
     const height = Dimensions.get('window').height;
 
-    const {LocationData, loading, error} = useFetchDriversOnce();
+    const {LocationData, loading, error,setrefresh,refresh} = useFetchDriversOnce();
     const [isRankingPage,setIsRankingPage]=useState(false)
-console.log("render home")
+     console.log("render home")
     async function getTableDataFromOneTable(id, tableNAME, OrderBy) {
         const DriverDocRef = await getUserDocRefById(id, "drivers");
         const travelHistoryRef = collection(db, 'drivers', DriverDocRef?.id, tableNAME);
@@ -62,18 +62,10 @@ console.log("render home")
         phoneNumber: driver?.phoneNumber,
         JeepImages: driver?.jeepImages,
     })) || []
-
     const [activeIndex, setActiveIndex] = useState(0);
-
-
-
-
-
     return (
 
         <View style={{flex: 1}}>
-
-
 
             <View style={HomeTabStyle.ParentStyle}>
                 <View style={HomeTabStyle.GreetingsconTxt}>
@@ -97,7 +89,10 @@ console.log("render home")
 
                 </View>
 
-                {!isRankingPage ?         <>
+                {!isRankingPage ?
+                    < ScrollView refreshControl={
+                    <RefreshControl refreshing={loading} onRefresh={()=>setrefresh(!refresh)} colors={['#3083FF']}/>
+                }  contentContainerStyle={{flex:1}}>
 
                     {
                         loading ? <CarouselSkeleton/> :
@@ -117,6 +112,7 @@ console.log("render home")
                                     setActiveIndex(index)
 
                                 }}
+
                                 style={{flex: 1}}
                                 renderItem={({item, index}) => (
                                     <View style={{
@@ -189,7 +185,7 @@ console.log("render home")
                             />
 
                     }
-                </> : <MostActiveJeeps mappedDrivers={LocationData} getTableDataFromOneTable={getTableDataFromOneTable}/>}
+                </ScrollView> : <MostActiveJeeps setrefresh={setrefresh} refresh={refresh} mappedDrivers={LocationData} getTableDataFromOneTable={getTableDataFromOneTable}/>}
 
             </View>
 

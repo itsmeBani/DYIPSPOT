@@ -46,13 +46,21 @@ function SetStatus() {
 
 
     const setStatus = async (status) => {
+
+        const UserStatus = {
+            status: status
+        };
+
+        if (CurrentUser?.role === "driver" && status === "offline"){
+            UserStatus.endpoint = {}
+            UserStatus.startpoint ={}
+        }
+
         setloading(true)
         const CurrentUserdocRef = await getUserDocRefById(CurrentUser.id, CurrentUser?.role === "passenger" ? "users" : "drivers");
 
         try {
-            await updateDoc(CurrentUserdocRef, {
-                status: status
-            });
+            await updateDoc(CurrentUserdocRef, UserStatus);
 
             setIsVisible(false)
             setRefresh(!refresh)
@@ -144,7 +152,9 @@ function SetStatus() {
                         )}
            <View style={{
                    width: 100}}>
-               {currentStatus &&        <TouchableOpacity activeOpacity={0.9} style={{width:100,alignItems:"center"}} onPress={handlePress}>
+               {currentStatus &&    
+               
+               <TouchableOpacity activeOpacity={0.9} style={{width:100,alignItems:"center"}} onPress={handlePress}>
                    <View style={{
                        width: 40,
                        padding: 8,

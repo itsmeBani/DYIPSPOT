@@ -8,21 +8,11 @@ import {PermissionAndTaskManagerContext} from "../Context/PermissionAndTaskManag
 const {width, height} = Dimensions.get("screen");
 
 function Timeline({Startpoint,Destination}) {
-
-
     const {Address: StartpointAdress,setCoordinates:setStartPointCoordinates} = useReverseGeoCoding(Startpoint?.longitude, Startpoint?.latitude);
-
-    const {Address: DestinationAddress,setCoordinates:setDestinationPointCoordinates} = useReverseGeoCoding(Destination?.longitude, Destination?.latitude);
-
-
-
+    const {Address: DestinationAddress,setCoordinates:setDestinationPointCoordinates} = useReverseGeoCoding(Destination?.longitude, Destination?.latitude)
     useEffect(()=>{
-
-
         setStartPointCoordinates({ longitude: Startpoint?.longitude, latitude: Startpoint?.latitude });
         setDestinationPointCoordinates({ longitude: Destination?.longitude, latitude: Destination?.latitude });
-
-
     },[Startpoint,Destination])
 
 

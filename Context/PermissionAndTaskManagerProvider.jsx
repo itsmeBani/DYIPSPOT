@@ -95,11 +95,12 @@ function PermissionAndTaskManagerProvider({children}) {
                 latitude: locations[0]?.coords?.latitude,
                 longitude: locations[0]?.coords?.longitude,
             };
+
             let status;
             const ref = await getUserDocRefById(id, CurrentUser?.role === "driver" ? "drivers":"users");
             const Doc = await getDoc(ref);
             if (Doc.exists()) {
-                status=   Doc.data().status  === "waiting" ? "waiting"
+                status=Doc.data().status  === "waiting" ? "waiting"
                   : appStateRef.current === 'active' ? 'online' : 'offline'
 
                 console.log(status,"status")
@@ -112,8 +113,8 @@ function PermissionAndTaskManagerProvider({children}) {
                     latitude: locations[0]?.coords?.latitude,
                     longitude: locations[0]?.coords?.longitude,
                     status:status
-
                 };
+
                 try {
                     await updateDoc(ref, PassengerData);
                     console.log("Passenger document updated with ID: ", id);
@@ -124,6 +125,7 @@ function PermissionAndTaskManagerProvider({children}) {
             }
 
             if (role === "driver") {
+
                 try {
                     await setCoordinates({
                         latitude: locations[0]?.coords?.latitude,

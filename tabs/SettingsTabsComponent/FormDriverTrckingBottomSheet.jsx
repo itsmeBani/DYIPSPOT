@@ -24,11 +24,15 @@ import {addDoc, collection, getDoc, serverTimestamp, updateDoc} from "firebase/f
 import {db} from "../../api/firebase-config";
 import RadioGroup, {RadioButton} from "react-native-radio-buttons-group";
 import {getUserDocRefById} from "../../CustomHooks/CustomFunctions/ReusableFunctions";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 function FormDriverTrackingBottomSheet({RequestBottomSheet,action,title,DriverInformation=null,}) {
 
-    // console.log(DriverInformation?.imageUrl)
-    const {CurrentUser} = useContext(CurrentUserContext)
+    const name = DriverInformation?.name.split(/\s+/);
+
+console.log(name)
+    const [error,setError]=useState(null)
+    const {CurrentUser,setRefresh,refresh} = useContext(CurrentUserContext)
     const [isLoading, setisLoading] = useState(false)
     const validationSchema = Yup.object().shape({
         firstName: Yup.string().required('First Name is required'),
@@ -50,12 +54,12 @@ function FormDriverTrackingBottomSheet({RequestBottomSheet,action,title,DriverIn
             aspect: [4, 4],
             quality: 1,
         });
-
+// console.log(result)
         if (!result.canceled) {
             setFieldValue('image', result);
         }
     };
-    const [selectedId, setSelectedId] = useState("2");
+    const [selectedId, setSelectedId] = useState("");
     const radioButtons = [
         {
             id: '1',
@@ -88,7 +92,7 @@ function FormDriverTrackingBottomSheet({RequestBottomSheet,action,title,DriverIn
             allowsMultipleSelection: true,
             quality: 1,
         });
-        console.log(result.assets);
+
         if (!result.canceled) {
 
             setFieldValue('JeepImages', result);
@@ -96,43 +100,59 @@ function FormDriverTrackingBottomSheet({RequestBottomSheet,action,title,DriverIn
         }
     }
     async function GetImageDownloadURL(result) {
-        const storage = getStorage();
-        const uploadPromises = result.assets.map(async (image) => {
-            const response = await fetch(image.uri);
-            console.log(image)
-            const blob = await response.blob();
-            const imageRef = ref(storage, `images/${image.fileName}`);
-            await uploadBytes(imageRef, blob);
-            const downloadURL = await getDownloadURL(imageRef);
-            console.log('Image uploaded and available at:', downloadURL);
-            return downloadURL;
-        });
 
-
-        const downloadURLs = await Promise.all(uploadPromises);
-        console.log('All images uploaded:', downloadURLs);
-        return downloadURLs;
+        if(result.assets[0].fileName){
+            const storage = getStorage();
+            const uploadPromises = result.assets.map(async (image) => {
+                const response = await fetch(image.uri);
+                console.log(image)
+                const blob = await response.blob();
+                const imageRef = ref(storage, `images/${image.fileName}`);
+                await uploadBytes(imageRef, blob);
+                const downloadURL = await getDownloadURL(imageRef);
+                console.log('Image uploaded and available at:', downloadURL);
+                return downloadURL;
+            });
+            const downloadURLs = await Promise.all(uploadPromises);
+            console.log('All images uploaded:', downloadURLs);
+            return downloadURLs;
+        }else {
+            return result.assets.map((url)=>url.uri)
+        }
 
     }
-    const SendRequest = async (values) => {
-        setisLoading(true)
+
+    const SendRequest = async (values, resetForm) => {
+        setisLoading(true);
+
+        const ProfilePictureUrl = await GetImageDownloadURL(values.image);
+        const JeepImages = await GetImageDownloadURL(values.JeepImages);
 
 
-        const ProfilePictureUrl = await GetImageDownloadURL(values.image)
-        const JeepImages = await GetImageDownloadURL(values.JeepImages)
+        console.log(ProfilePictureUrl)
         const UpdateRef = await getUserDocRefById(CurrentUser?.id, "drivers");
-
         const req = collection(db, "Request");
         const UpdateProfileData = {
             id: CurrentUser?.id,
             address: values?.address,
-            imageUrl:ProfilePictureUrl[0],
-            jeepImages:JeepImages,
-            jeepName:values?.jeepName,
+            imageUrl: ProfilePictureUrl[0],
+            jeepImages: JeepImages,
+            jeepName: values?.jeepName,
             name: values?.firstName + " " + values?.lastName,
             phoneNumber: values?.phoneNumber,
-            forHire:values?.forhire,
+            forHire: values?.forhire,
         }
+        const UpdateLocalStorage={
+            id: CurrentUser?.id,
+            address: values?.address,
+            picture: ProfilePictureUrl[0],
+            role:"driver",
+            email:CurrentUser?.email,
+            name: values?.firstName + " " + values?.lastName,
+            phoneNumber: values?.phoneNumber,
+
+        }
+
         const RequestData = {
             id: CurrentUser?.id,
             profilePictureUrl: ProfilePictureUrl,
@@ -145,38 +165,55 @@ function FormDriverTrackingBottomSheet({RequestBottomSheet,action,title,DriverIn
             forHire: values?.forhire,
             status: "pending",
             date: serverTimestamp(),
-        }
+        };
 
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Request timeout")), 2000)
+        );
+        const requestPromise = new Promise(async (resolve, reject) => {
+            try {
+                if (action === "request") {
+                    await addDoc(req, RequestData);
+                }
+                if (action === "update") {
+                    const getProfileDoc = await getDoc(UpdateRef);
+                    if (getProfileDoc.exists()) {
+                        await updateDoc(UpdateRef, UpdateProfileData);
+                        await AsyncStorage.setItem("UserCredentials", JSON.stringify(UpdateLocalStorage));
+                        resetForm()
+                        setRefresh(!refresh)
+                        setError(null)
+                        RequestBottomSheet.current.close();
+                    }
+                }
+
+                console.log("Added Request ");
+                resolve();
+            } catch (e) {
+                console.log(e);
+                reject(e);
+            }
+        });
 
         try {
-            if (action==="request"){
-                await addDoc(req, RequestData);
-            }
-            if (action==="update"){
-                const  getProfileDoc = await getDoc(UpdateRef);
-                if (getProfileDoc.exists()) {
-                    await updateDoc(UpdateRef,UpdateProfileData)
-
-                          RequestBottomSheet.current.close()
-                }
-            }
-
-            console.log("Added Request ");
-            setisLoading(false)
+            await Promise.race([requestPromise, timeoutPromise]);
         } catch (e) {
-            console.log(e)
-            setisLoading(false)
+            if (e.message === "Request timeout") {
+                setError("Something went wrong");
+            } else {
+                setError("try checking your internet");
+            }
+        } finally {
+            setisLoading(false);
         }
-    }
+
+    };
+
     const ImagePickerCarousel = ({setFieldValue, error, JeepImages}) => {
         return (
-
-
             <BottomSheetScrollView showsHorizontalScrollIndicator={false} horizontal={true}
                                    style={{padding: 0, display: "flex"}}>
                 <View style={{flexDirection: "row", paddingVertical: 10, paddingLeft: 10}}>
-
-
                     <TouchableOpacity onPress={() => GetMultipleImage(setFieldValue)} style={{
                         height: 70,
                         padding: 10,
@@ -298,7 +335,7 @@ function FormDriverTrackingBottomSheet({RequestBottomSheet,action,title,DriverIn
             enableOverDrag={true}
             index={-1}
             enablePanDownToClose={true}
-            enableContentPanningGesture={true}
+            enableContentPanningGesture={false}
             handleIndicatorStyle={{backgroundColor: "#3083FF"}}
             backgroundStyle={{borderRadius: 30, elevation: 10}}>
             <BottomSheetScrollView scrollEnabled={true} showsVerticalScrollIndicator={false}>
@@ -307,8 +344,8 @@ function FormDriverTrackingBottomSheet({RequestBottomSheet,action,title,DriverIn
                     <Formik
                         enableReinitialize={true}
                         initialValues={{
-                            firstName: DriverInformation ? DriverInformation?.name : '',
-                            lastName:  DriverInformation ? DriverInformation?.name : '',
+                            firstName: DriverInformation ? name.length >= 3 ? name[0] +" "+ name[1] :name[0]   : '',
+                            lastName:  DriverInformation ? name[name.length-1] : '',
                             address:  DriverInformation ? DriverInformation?.address : '',
                             phoneNumber: DriverInformation ? DriverInformation?.phoneNumber : '',
                             jeepName: DriverInformation ? DriverInformation?.jeepName : '',
@@ -320,8 +357,8 @@ function FormDriverTrackingBottomSheet({RequestBottomSheet,action,title,DriverIn
                             forhire: DriverInformation ? DriverInformation?.forHire : '',
                         }}
                         validationSchema={validationSchema}
-                        onSubmit={async (values) => {
-                            await SendRequest(values);
+                        onSubmit={async (values, { resetForm }) => {
+                            await SendRequest(values, resetForm);
                         }}
                     >
                         {({
@@ -476,9 +513,10 @@ function FormDriverTrackingBottomSheet({RequestBottomSheet,action,title,DriverIn
                                         {isLoading ? <ActivityIndicator size="small" color="#fff"/> :
                                             <Text style={RequestStyles.btntxt}>{action === "update" ? "Update Profile" :"Send Request"}</Text>}
                                     </TouchableOpacity>
-
+                                    <Text style={RequestStyles.error}>{error}</Text>
 
                                 </View>
+
                             </View>
 
                         )}
@@ -537,6 +575,7 @@ const RequestStyles = StyleSheet.create({
         justifyContent: 'center',
         display: 'flex',
         gap: 5,
+        marginTop:5,
         borderRadius: 10,
     }, btn: {
         backgroundColor: '#3083FF',

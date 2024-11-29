@@ -14,16 +14,35 @@ function TravelHistoryRoute({JeepHistoryData, getTableDataFromOneTable}) {
 
     const [date, setDate] = useState(null);
     const fetchTravelHistory = async () => {
-        setRefreshing(true)
+        setRefreshing(true);
         if (!JeepHistoryData?.id) {
-            return
+            setRefreshing(false);
+            return;
         }
+
         try {
-            const {Data} = await getTableDataFromOneTable(JeepHistoryData?.id, "travelHistory", "Date")
-            setTravelHistory(Data);
-            setRefreshing(false)
+
+            const { Data } = await getTableDataFromOneTable(JeepHistoryData?.id, "travelHistory", "Date");
+            const TestfilterTravelHistory = Data?.filter((history, index, self) => {
+                const tripDate = history?.Date?.seconds ? new Date(history.Date.seconds * 1000) : null;
+                if (!tripDate) return false;
+                const tripDateWithoutTime = new Date(tripDate);
+                tripDateWithoutTime.setHours(0, 0, 0, 0);
+                const tripIdentifier = `${history.address}_${tripDateWithoutTime.getTime()}`;
+                return self.findIndex(t => {
+                    const tDate = t?.Date?.seconds ? new Date(t.Date.seconds * 1000) : null;
+                    if (!tDate) return false;
+                    const tDateWithoutTime = new Date(tDate);
+                    tDateWithoutTime.setHours(0, 0, 0, 0);
+                    return `${t.address}_${tDateWithoutTime.getTime()}` === tripIdentifier;
+                }) === index;
+            });
+
+            setTravelHistory(TestfilterTravelHistory);
+            setRefreshing(false);
         } catch (error) {
             console.error('Error fetching travel history:', error);
+            setRefreshing(false); // Reset refreshing state in case of error
         }
     };
 
@@ -33,18 +52,22 @@ function TravelHistoryRoute({JeepHistoryData, getTableDataFromOneTable}) {
     }, [JeepHistoryData]);
 
 
-    const filterTravelHistory = travelHistory?.filter((history, index, self) => {
-        const tripDate = history?.Date?.seconds ? new Date(history.Date.seconds * 1000) : null;
-        if (!tripDate) return false;
 
+
+
+    const filterTravelHistory = travelHistory?.filter(history => {
+        const tripDate = history?.Date?.seconds ? new Date(history.Date.seconds * 1000) : null;
+
+        if (!tripDate) return false;
         if (!date) {
             return true;
         }
-        const selectedDateWithoutTime = new Date(date.setHours(0, 0, 0, 0));
+        const selectedDateWithoutTime = new Date(date.setHours(0, 0, 0, 0)) ;
         const tripDateWithoutTime = new Date(tripDate.setHours(0, 0, 0, 0));
-        const tripIdentifier = `${history.address}_${tripDateWithoutTime.getTime()}`;
-        return self.findIndex(t => `${t.address}_${new Date(t.Date.seconds * 1000).setHours(0, 0, 0, 0)}` === tripIdentifier) === index;
+        return selectedDateWithoutTime.getTime() === tripDateWithoutTime.getTime();
     });
+
+
 
 
 

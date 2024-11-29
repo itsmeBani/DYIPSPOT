@@ -16,6 +16,7 @@ const WeatherIndicator = () => {
                 `https://api.openweathermap.org/data/2.5/weather?q=Alilem,PH&units=metric&appid=385d1ca69f63972d08204be0ac485242`
             );
             const temp = response.data.main.temp;
+            console.log(temp)
             const condition = response.data.weather[0].main;
             setTemperature(temp);
             setWeatherCondition(condition);
@@ -56,7 +57,7 @@ const WeatherIndicator = () => {
             </View>
 
             <View style={{ position:"relative"}}>
-                {weatherCondition === "Rain" || weatherCondition === "Thunderstorm"
+                {weatherCondition === "Thunderstorm" || weatherCondition === "Thunderstorm"
 
                     ? (
                         <View  style={{position:"absolute", backgroundColor: "#FFF3C6FF",borderRadius: 10, alignItems: "center", flexDirection: "row", flex: 1, gap: 5, padding: 10}}>

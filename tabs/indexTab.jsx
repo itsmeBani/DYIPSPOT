@@ -49,9 +49,10 @@ function IndexTab(props) {
         tabBarActiveTintColor: '#3083FF',
         tabBarInactiveTintColor: 'gray',
         headerShown: false,
-
+        tabBarHideOnKeyboard: true,
         headerStyle: {
             backgroundColor: "#fff",
+
             borderBottomLeftRadius: 10,
             borderBottomRightRadius: 10,
             shadowColor: 'black',
@@ -103,7 +104,7 @@ function IndexTab(props) {
                                           backgroundColor: '#fff',
                                           shadowColor: 'black',
                                           shadowRadius:30,
-                                          elevation:10
+                                          elevation:10,
 
                                       },
                                       tabBarLabelPosition:"below-icon",
@@ -112,7 +113,7 @@ function IndexTab(props) {
                                   }} component={MapTab}/>
 
 
-                      <Tab.Screen name="Settings"  component={SettingsTab}/>
+                      <Tab.Screen name="Settings"   component={SettingsTab}/>
                   </Tab.Navigator>
               </NavigationContainer>
             </SafeAreaProvider>

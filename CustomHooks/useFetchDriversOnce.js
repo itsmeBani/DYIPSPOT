@@ -6,12 +6,13 @@ const useFetchDriversOnce = () => {
 
     const [LocationData, setLocationData] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [skeletonState, setSkeletonState] = useState(false)
     const [error, setError] = useState(null);
        const [refresh,setrefresh]=useState(false)
     useEffect(() => {
-        setLoading(true);
-        const fetchData = async () => {
 
+        const fetchData = async () => {
+            setLoading(true);
             try {
                 const collectionRef = collection(db, "drivers");
                 const querySnapshot = await getDocs(collectionRef);
@@ -21,11 +22,12 @@ const useFetchDriversOnce = () => {
                 }));
                 setLocationData(Data);
                 console.log("refresh")
-                setLoading(false);
             } catch (error) {
                 console.error("Error fetching data: ", error);
                 setError(error);
 
+            }finally {
+                setLoading(false);
             }
         };
 

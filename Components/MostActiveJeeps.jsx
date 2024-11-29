@@ -1,12 +1,12 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {Dimensions, Image, RefreshControl, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {Dimensions, Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import ModalDatePicker from "./ModalDatePicker";
 import {BarChart} from "react-native-gifted-charts"; // Import BarChart from react-native-chart-kit
 const screenWidth = Dimensions.get("window").width;
-const MostActiveJeeps = ({getTableDataFromOneTable, mappedDrivers}) => {
+const MostActiveJeeps = ({getTableDataFromOneTable, mappedDrivers,setrefresh,refresh}) => {
     const [date, setDate] = useState(null);
     const [data, setData] = useState()
-    const [refresh, setRefresh] = useState(false);
+      const [activecardId,setActiveCardId] = useState()
     const [travelHistoryCount, setTravelHistoryCount]=useState()
     const [MaxValueTrips, setMaxValueTrips] = useState(60)
     const [MaxValueTravel, setMaxValueTravel] = useState(60)
@@ -19,7 +19,7 @@ const MostActiveJeeps = ({getTableDataFromOneTable, mappedDrivers}) => {
         }
     }
     const TRIPS = async (tableName,OrderBy) => {
-        setRefresh(true)
+
         return await Promise.all(mappedDrivers?.map(async (driver) => {
             const count = await CountDataFromTables(driver?.id,tableName,OrderBy);
             const travelCount=await  CountDataFromTables(driver?.id,"travelHistory","Date");
@@ -32,6 +32,7 @@ const MostActiveJeeps = ({getTableDataFromOneTable, mappedDrivers}) => {
                 label: driver?.jeepName,
                 jeepImages: driver?.jeepImages[0],
                 topLabelComponent: () => (
+                <View style={{position:"relative"}}>
                     <Image
                         style={{
                             height: 30,
@@ -43,23 +44,46 @@ const MostActiveJeeps = ({getTableDataFromOneTable, mappedDrivers}) => {
                         }}
                         source={{uri: driver?.jeepImages[0]}}
                     />
+
+                    <View style={{ position: "absolute", right: -15, top: -10 }}>
+                        <Text
+                            style={{
+                                backgroundColor: "white",
+                                borderRadius: 100,
+                                paddingHorizontal: 10,
+                                elevation: 3,
+
+                                whiteSpace: "nowrap",
+                                color:  tableName !== "Trips" ? '#7677ff' : "#3083FF",
+                                fontSize: 10,
+                                fontFamily: 'PlusJakartaSans-Medium',
+                            }}
+                            numberOfLines={3}
+                            ellipsizeMode="tail"
+                        >
+                            {tableName === "Trips" ? count.length : travelCount.length}
+                        </Text>
+                    </View>
+                </View>
                 ),
             };
         })) || [];
     };
 
 function _render() {
+    setrefresh(true)
     TRIPS("Trips","date").then(data => {
         const maxValue = Math.max(...data.map(item => item.value));
         setMaxValueTrips(maxValue)
         setData(data);
-        setRefresh(false)
+        setrefresh(false)
+
     });
     TRIPS("travelHistory","Date").then(data => {
         const maxValue = Math.max(...data.map(item => item.value));
         setMaxValueTravel(maxValue)
         setTravelHistoryCount(data);
-        setRefresh(false)
+        setrefresh(false)
     });
 }
     useEffect(() => {
@@ -86,7 +110,7 @@ function _render() {
                     color: "#3083FF",
 
                 }}>
-                    Top Performing Jeeps
+                    Top Operating Jeeps
                 </Text>
             </View>
 
@@ -122,7 +146,7 @@ function _render() {
                             <BarChart
                                 barWidth={40}
                                 noOfSections={5}
-                                maxValue={MaxValueTrips+20}
+                                maxValue={MaxValueTrips+60}
                                 rulesColor={"#3083FF"}
                                 rulesType={"dashed"}
                                 width={screenWidth - 100}
@@ -130,13 +154,13 @@ function _render() {
                                 capColor={'rgba(78, 0, 142)'}
                                 capThickness={4}
                                 isAnimated={true}
+                                onPress={(e)=>{setActiveCardId(e.id)}}
                                 yAxisColor={"transparent"}
                                 xAxisColor={"transparent"}
-
                                 initialSpacing={10}
                                 xAxisLabelTextStyle={{
                                     color: "#3083FF",
-                                    textTransform: "lowercase",
+                                    textTransform: "capitalize",
                                     fontFamily: "PlusJakartaSans-Medium",
                                     fontSize: 10
                                 }}
@@ -182,7 +206,7 @@ function _render() {
                         barWidth={40}
                         noOfSections={5}
 
-                        maxValue={MaxValueTravel+20}
+                        maxValue={MaxValueTravel+60}
                         rulesColor={"#7677ff"}
                         rulesType={"dashed"}
                         width={screenWidth - 100}
@@ -218,59 +242,79 @@ function _render() {
                 contentContainerStyle={{ gap: 8, padding: 40, paddingTop: 20 }}
                 style={styles.jeepcon}
             >
-                {data &&
-                    data?.map((jeep, index) => {
-                        return (
-                            <View
+                {data &&  data?.sort((a, b) => {
+                        const sumA = (a.value || 0) + (a.travelCount || 0);
+                        const sumB = (b.value || 0) + (b.travelCount || 0);
+                        return sumB - sumA;
+                    }).map((jeep, index) => {
+                            return (
+                         <TouchableOpacity     key={jeep?.id} activeOpacity={1} onPress={()=>setActiveCardId(jeep?.id)}>
+                             <View
 
-                                id={jeep?.id}
-                                style={{
-                                    elevation: 1,
-                                    flexDirection: "row",
-                                    paddingVertical: 5,
-                                    backgroundColor: "white",
-                                    justifyContent: "space-between",
-                                    paddingHorizontal: 10,
-                                    borderRadius: 10,
-                                    width: "100%",
-                                    gap: 10,
-                                }}
-                                key={jeep?.id}
-                            >
-                                <View
-                                    style={{
-                                        height: 50,
-                                        width: 50,
-                                        backgroundColor: "grey",
-                                        borderRadius: 100,
-                                        overflow: "hidden",
-                                        borderColor: "white",
-                                        borderWidth: 3,
-                                    }}
-                                >
-                                    <Image style={{ flex: 1 }} source={{ uri: jeep?.jeepImages }} />
-                                </View>
+                                 id={jeep?.id}
+                                 style={{
+                                     elevation: 1,
+                                     flexDirection: "row",
+                                     paddingVertical: 5,
+                                     backgroundColor: activecardId === jeep.id? "#3083FF": "white",
+                                     justifyContent: "space-between",
+                                     paddingHorizontal: 10,
+                                     borderRadius: 10,
+                                     width: "100%",
+                                     gap: 10,
+                                 }}
 
-                                <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-                                    <View>
-                                        <Text style={styles.label}>Total Trips</Text>
-                                        <Text style={styles.count}>{jeep?.value}</Text>
-                                    </View>
-                                    <View
-                                        style={{
-                                            height: "90%",
-                                            width: 2,
-                                            backgroundColor: "white",
-                                            borderRadius: 100,
-                                            opacity: 0.3,
-                                        }}
-                                    />
-                                    <View>
-                                        <Text style={styles.label}>Travels</Text>
-                                        <Text style={styles.count}>{jeep?.travelCount}</Text>
-                                    </View>
-                                </View>
-                            </View>
+                             >
+                                 <View
+                                     style={{
+                                         height: 50,
+                                         width: 50,
+                                         backgroundColor: "grey",
+                                         borderRadius: 10,
+
+                                         overflow: "hidden",
+
+                                     }}
+                                 >
+                                     <Image style={{ flex: 1 }} source={{ uri: jeep?.jeepImages }} />
+                                 </View>
+
+                                 <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
+                                     <View>
+                                         <Text style={[styles.label,{color: activecardId === jeep.id? "white" :"#605f5f"}]}>Total Trips</Text>
+                                         <Text style={[styles.ranking,{color: activecardId === jeep.id? "white" :"#3083FF"}]}>{jeep?.value}</Text>
+                                     </View>
+                                     <View
+                                         style={{
+                                             height: "90%",
+                                             width: 2,
+                                             backgroundColor: activecardId === jeep.id ? "white" :"#605f5f",
+                                             borderRadius: 100,
+                                             opacity: 0.3,
+                                         }}
+                                     />
+
+                                     <View>
+                                         <Text style={[styles.label,{color: activecardId === jeep.id? "white" :"#605f5f"}]}>Travels</Text>
+                                         <Text style={[styles.ranking,{color: activecardId === jeep.id? "white" :"#3083FF"}]}>{jeep?.travelCount}</Text>
+                                     </View>
+                                     <View
+                                         style={{
+                                             height: "90%",
+                                             width: 2,
+                                             backgroundColor: activecardId === jeep.id ? "white" :"#605f5f",
+                                             borderRadius: 100,
+                                             opacity: 0.3,
+                                         }}
+                                     />
+                                     <View style={{paddingHorizontal:14}}>
+                                         <Text style={[styles.label,{color: activecardId === jeep.id? "white" :"#605f5f"}]}>Top</Text>
+                                         <Text style={[styles.ranking,{color: activecardId === jeep.id? "white" :"#3083FF"}]}>{index+1}</Text>
+                                     </View>
+
+                                 </View>
+                             </View>
+                         </TouchableOpacity>
                         );
                     })}
             </ScrollView>
@@ -300,7 +344,7 @@ const styles = StyleSheet.create({
         fontSize: 23,
         lineHeight: 26,
         // color: '#3083FF',
-        color: '#3083FF',
+        color: '#605f5f',
         fontFamily: 'PlusJakartaSans-Bold',
         textAlign: "center"
     }, label: {
@@ -308,6 +352,13 @@ const styles = StyleSheet.create({
         color: '#605f5f',
         fontSize: 10,
         fontFamily: 'PlusJakartaSans-Medium',
+        textAlign: "center",
+        textTransform: "capitalize"
+    },ranking:{
+        lineHeight: 26,
+        color: '#3083FF',
+        fontSize: 23,
+        fontFamily: 'PlusJakartaSans-Bold',
         textAlign: "center",
         textTransform: "capitalize"
     }

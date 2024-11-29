@@ -11,7 +11,7 @@ import {getDoc} from "firebase/firestore";
 import {CurrentUserContext} from "../Context/CurrentUserProvider";
 
 function NearbyPassengers(props) {
-    const {camera, GotoNearestPassenger,setFallowCurrentUser} = useContext(JeepStatusContext)
+    const {camera, GotoNearestPassenger, setFallowCurrentUser} = useContext(JeepStatusContext)
     const [userLocationData] = useFetchLocation("users");
     const [driverLocationData] = useFetchLocation("drivers");
     const [PassengerDistance, setPassengerDistance] = useState()
@@ -29,10 +29,12 @@ function NearbyPassengers(props) {
             return null;
         }
         const distantUsers = users.filter(user => {
-            const distance = geolib.getDistance({latitude: DriverCoordinates?.latitude, longitude: DriverCoordinates?.longitude}, user);
+            const distance = geolib.getDistance({
+                latitude: DriverCoordinates?.latitude,
+                longitude: DriverCoordinates?.longitude
+            }, user);
             return distance >= 600;
         });
-
 
 
         return geolib.findNearest(
@@ -48,8 +50,8 @@ function NearbyPassengers(props) {
                 const userDocSnap = await getDoc(DriverUserdocRef);
                 if (userDocSnap.exists()) {
                     setDriverCoordinates({
-                        latitude:userDocSnap?.data().latitude,
-                        longitude:userDocSnap?.data().longitude
+                        latitude: userDocSnap?.data().latitude,
+                        longitude: userDocSnap?.data().longitude
                     });
                 }
             }
@@ -63,7 +65,7 @@ function NearbyPassengers(props) {
         setFallowCurrentUser(false)
         const nearestPassenger = await NearestPassenger();
 
-      await  GotoNearestPassenger(nearestPassenger.longitude, nearestPassenger.latitude)
+        await GotoNearestPassenger(nearestPassenger.longitude, nearestPassenger.latitude)
     }
 
     const fetchNearestPassenger = async () => {
@@ -84,7 +86,7 @@ function NearbyPassengers(props) {
             if (response?.routes?.[0]?.distance != null) {
                 const distance = response.routes[0].distance;
 
-console.log(distance)
+                console.log(distance)
                 setPassengerDistance(distance);
             } else {
                 console.log("Route response does not contain a valid distance.");
@@ -137,9 +139,8 @@ console.log(distance)
                                 fontSize: 17,
                                 textTransform: "uppercase",
                                 lineHeight: 18,
-                            }}>{PassengerDistance ? PassengerDistance > 1000 ? (PassengerDistance / 1000).toFixed(1)   : PassengerDistance?.toFixed(1)
-
-                                : 0}  </Text>{PassengerDistance &&  PassengerDistance > 1000 ? "KM"   : "M"} </Text>
+                            }}>{PassengerDistance ? PassengerDistance > 1000 ? (PassengerDistance / 1000).toFixed(1) : PassengerDistance?.toFixed(1)
+                                : 0}  </Text>{PassengerDistance && PassengerDistance > 1000 ? "KM" : "M"} </Text>
                     </View>
 
                 </View>

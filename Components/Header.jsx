@@ -36,14 +36,13 @@ function Header(props) {
 
 export default Header;
 const HeaderStyle = StyleSheet.create({
-
-
     headerContainer: {
         display: 'flex',
         width: '100%',
         flexDirection: "row",
         justifyContent: "space-between",
         height: 'auto',
+
         alignItems: 'center',
         position: "relative"
     },
@@ -63,6 +62,5 @@ const HeaderStyle = StyleSheet.create({
         borderRadius: 30
     },round:{
         borderRadius: 30
-
     }
 })

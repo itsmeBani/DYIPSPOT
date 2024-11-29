@@ -17,7 +17,7 @@ const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_ANDROID_CLIENT_ID
 import SpeedImage from "../assets/speed.png"
 import passengers from "../assets/passenger.png"
 import arrivaltime from "../assets/arrivaltime.png"
-import {collection, addDoc, updateDoc, query, setDoc, where, doc, getDocs} from "firebase/firestore";
+import {collection, addDoc, updateDoc, query, setDoc, where, doc, getDocs, serverTimestamp} from "firebase/firestore";
 import {db} from "../api/firebase-config"
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {CurrentUserContext} from "../Context/CurrentUserProvider";
@@ -33,19 +33,20 @@ function WelcomePage(props) {
         handleSignInWithGoogle();
     }, [response])
     const handleSignInWithGoogle = async () => {
+
         try {
 
             if (response?.type === "success") {
-                setisLoading(true)
                 await getUserInfo(response.authentication.accessToken);
-                await setisLoading(false)
                 setRefresh(!refresh)
+
 
             }
         } catch (error) {
             console.error("Error retrieving user data from AsyncStorage:", error);
-            await setisLoading(false)
             console.log("try checking your connection")
+        }finally {
+            setisLoading(false)
         }
     }
 
@@ -108,6 +109,7 @@ function WelcomePage(props) {
                             latitude: null,
                             longitude: null,
                             status: null,
+                            CreatedAt:serverTimestamp()
                         });
                         console.log("Passenger document written with ID: ");
                         user.role = "passenger";
@@ -168,6 +170,7 @@ function WelcomePage(props) {
                 </View>
                 <View style={styles.ContainerButton}>
                     <TouchableOpacity style={styles.Googlebutton} disabled={isLoading} onPress={() => {
+                        setisLoading(true)
                         promptAsync().then()
                     }} activeOpacity={0.7}>
 
